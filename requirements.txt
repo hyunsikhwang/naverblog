@@ -1,2 +1,2 @@
 streamlit
-bs
+bs4
