@@ -5,83 +5,92 @@ import time
 import re
 
 
-st.title("🎈 My new app")
-st.write(
-    "Let's start building! For help and inspiration, head over to [docs.streamlit.io](https://docs.streamlit.io/)."
-)
+st.title("🎈 NAVER Blog Scraping")
+
+st.write("네이버 블로그의 본문 내용을 스크래핑합니다.")
 
 
 
-def scrape_naver_blog_content(blog_url):
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-        response = requests.get(blog_url, headers=headers)
-        response.raise_for_status()  # 응답 상태 코드가 200 OK가 아니면 예외 발생
-        soup = BeautifulSoup(response.text, 'html.parser')
+import requests
+from bs4 import BeautifulSoup
+import re
+import json
 
-        # 네이버 블로그의 본문 내용은 다양한 태그와 클래스에 담길 수 있습니다.
-        # 아래는 몇 가지 흔한 경우를 가정한 선택자이며, 실제 블로그 구조에 따라 수정해야 할 수 있습니다.
+def convert_to_mobile_url(pc_url: str) -> str:
+    """
+    PC 버전 네이버 블로그 URL을 모바일 버전 URL로 변환합니다.
+    예: https://blog.naver.com/아이디/포스트번호 -> https://m.blog.naver.com/아이디/포스트번호
+    """
+    if "blog.naver.com" not in pc_url:
+        raise ValueError("유효한 네이버 블로그 URL이 아닙니다.")
+    # URL이 이미 모바일 버전이면 그대로 반환
+    if "m.blog.naver.com" in pc_url:
+        return pc_url
 
-        # 1. iframe 내부의 본문 (최근 방식)
-        main_frame = soup.find('iframe', id='mainFrame')
-        if main_frame:
-            iframe_url = main_frame['src']
-            if not iframe_url.startswith('http'):
-                base_url = blog_url.split('/')[0] + '//' + blog_url.split('/')[2]
-                iframe_url = base_url + iframe_url
-            iframe_response = requests.get(iframe_url, headers=headers)
-            iframe_response.raise_for_status()
-            iframe_soup = BeautifulSoup(iframe_response.text, 'html.parser')
-            content_div = iframe_soup.find('div', class_='se-main-container') # 스마트 에디터
-            if not content_div:
-                content_div = iframe_soup.find('div', id='postViewArea') # 구버전 에디터
-            if content_div:
-                return content_div.get_text(separator='\n', strip=True)
+    # 간단하게 'blog.naver.com'을 'm.blog.naver.com'으로 대체합니다.
+    mobile_url = pc_url.replace("blog.naver.com", "m.blog.naver.com")
+    return mobile_url
 
-        # 2. iframe 없이 직접 본문 (과거 방식 또는 특정 설정)
-        else:
-            content_div = soup.find('div', class_='se-main-container') # 스마트 에디터
-            if not content_div:
-                content_div = soup.find('div', id='postViewArea') # 구버전 에디터
-            if content_div:
-                return content_div.get_text(separator='\n', strip=True)
+def scrape_naver_blog(pc_url: str) -> str:
+    """
+    네이버 블로그 PC 버전 URL을 받아, 모바일 페이지에서 본문 HTML을 추출합니다.
+    """
+    mobile_url = convert_to_mobile_url(pc_url)
 
-        return "본문 내용을 찾을 수 없습니다."
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/98.0.4758.102 Safari/537.36"
+        )
+    }
+    response = requests.get(mobile_url, headers=headers)
+    if not response.ok:
+        raise ConnectionError(f"모바일 페이지 요청 실패: {response.status_code}")
 
-    except requests.exceptions.RequestException as e:
-        print(f"요청 오류: {e}")
-        return None
-    except Exception as e:
-        print(f"스크래핑 오류: {e}")
-        return None
+    html_text = response.text
+    soup = BeautifulSoup(html_text, "html.parser")
 
-def remove_blank_lines(text: str) -> str:
-    # 1) Zero‑width space, BOM 같은 보이지 않는 문자 제거
-    for ch in ('\u200B', '\uFEFF'):
-        text = text.replace(ch, '')
+    # 예제 1: 일반적인 본문 컨테이너 div를 활용하는 경우
+    content_div = soup.find("div", {"class": "se-main-container"})
+    if content_div:
+        # return str(content_div)
+        return content_div.get_text(separator='\n', strip=True)
 
-    # 2) 줄 구분을 모두 '\n' 으로 통일
-    text = text.replace('\r\n', '\n').replace('\r', '\n')
+    # 예제 2: JSON 데이터가 포함된 <script> 태그에서 본문 추출 (예상 변수명이 __APOLLO_STATE__ 등)
+    # 아래 정규식은 예시이며, 실제 변수명과 구조는 HTML 소스 확인 후 수정 필요합니다.
+    pattern = re.compile(r'window\.__APOLLO_STATE__\s*=\s*(\{.*?\});', re.DOTALL)
+    match = pattern.search(html_text)
+    if match:
+        json_str = match.group(1).strip()
+        try:
+            data = json.loads(json_str)
+            # 데이터 구조에 따라 수정 필요: 예시로 postContent 혹은 content를 찾음
+            if "post" in data and "content" in data["post"]:
+                return data["post"]["content"]
+        except json.JSONDecodeError:
+            pass  # JSON 파싱 실패 시 아래 방법 사용
 
-    # 3) 완전히 공백만 있는 줄(탭, 스페이스, NBSP 등 포함) 제거
-    #    (?m) 멀티라인 모드, ^…$ 에 \s 를 써서 유니코드 공백 전부 매칭
-    cleaned = re.sub(r'(?m)^[\s\u00A0]*\n', '', text)
+    # 예제 3: iframe 구조인 경우, iframe의 src를 추출하여 추가 요청
+    iframe = soup.find("iframe")
+    if iframe and iframe.has_attr("src"):
+        iframe_src = iframe["src"]
+        iframe_response = requests.get(iframe_src, headers=headers)
+        if iframe_response.ok:
+            iframe_soup = BeautifulSoup(iframe_response.text, "html.parser")
+            # iframe 내에 본문이 있는지 확인 (예: div id="postViewArea")
+            iframe_content = iframe_soup.find("div", {"id": "postViewArea"})
+            if iframe_content:
+                return str(iframe_content)
 
-    # 4) 앞뒤에 남은 빈 줄/공백 잘라내기
-    return cleaned.strip()
-
+    raise ValueError("본문 데이터를 찾지 못했습니다. HTML 구조를 재확인해 주세요.")
 
 if __name__ == "__main__":
-    blog_url_to_scrape = st.text_input("스크래핑할 네이버 블로그 URL을 입력하세요:", "https://m.blog.naver.com/hkn238/223839853717")
-    if not blog_url_to_scrape:
-        blog_url_to_scrape = "https://m.blog.naver.com/hkn238/223839853717" # 여기에 스크래핑하려는 네이버 블로그 URL을 넣어주세요.
-    content_1 = scrape_naver_blog_content(blog_url_to_scrape)
-    content = remove_blank_lines(content_1)
+    url = st.text_input("네이버 블로그 URL을 입력하세요:", "https://blog.naver.com/ranto28/223839799372")
 
-    if content:
-        st.write("스크래핑된 본문 내용:\n")
-        st.write(content)
-    else:
-        st.write("본문 스크래핑에 실패했습니다.")
+    try:
+        content_html = scrape_naver_blog(url)
+        st.write("=== 본문 HTML ===")
+        st.write(content_html)
+    except Exception as e:
+        st.write(f"오류 발생: {e}")
