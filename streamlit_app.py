@@ -1,8 +1,8 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-import time
 import re
+import json
 
 
 st.title("🎈 NAVER Blog Scraping")
@@ -11,10 +11,6 @@ st.write("네이버 블로그의 본문 내용을 스크래핑합니다.")
 
 
 
-import requests
-from bs4 import BeautifulSoup
-import re
-import json
 
 def convert_to_mobile_url(pc_url: str) -> str:
     """
