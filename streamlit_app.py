@@ -74,7 +74,9 @@ def remove_blank_lines(text: str) -> str:
 
 
 if __name__ == "__main__":
-    blog_url_to_scrape = "https://m.blog.naver.com/hkn238/223839853717" # 여기에 스크래핑하려는 네이버 블로그 URL을 넣어주세요.
+    blog_url_to_scrape = st.text_input("스크래핑할 네이버 블로그 URL을 입력하세요:", "https://m.blog.naver.com/hkn238/223839853717")
+    if not blog_url_to_scrape:
+        blog_url_to_scrape = "https://m.blog.naver.com/hkn238/223839853717" # 여기에 스크래핑하려는 네이버 블로그 URL을 넣어주세요.
     content_1 = scrape_naver_blog_content(blog_url_to_scrape)
     content = remove_blank_lines(content_1)
 
