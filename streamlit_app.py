@@ -7,6 +7,7 @@ import base64
 import os
 from google import genai
 from google.genai import types
+import time
 
 
 api_key = st.secrets["api_key"]
@@ -227,7 +228,8 @@ def generate(api_key, text):
         config=generate_content_config,
     ):
         chunks += chunk.text
-        st.write(chunk.text)
+        st.write_stream(chunk.text)
+        time.sleep(0.1)
     
     return chunks
 
