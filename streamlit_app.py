@@ -218,7 +218,7 @@ def generate(api_key, text):
     generate_content_config = types.GenerateContentConfig(
         response_mime_type="text/plain",
     )
-    
+
     chunks = ""
 
     for chunk in client.models.generate_content_stream(
@@ -246,7 +246,8 @@ if __name__ == "__main__":
     try:
         content_html = scrape_naver_blog(links[url])
 
-        content_text = generate(api_key, content_html)
+        with st.status("Generating text..."):
+            content_text = generate(api_key, content_html)
 
         # content_text = insert_line_breaks(content_html)
         # st.subheader("=== 본문 ===")
