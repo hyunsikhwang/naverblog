@@ -218,6 +218,8 @@ def generate(api_key, text):
     generate_content_config = types.GenerateContentConfig(
         response_mime_type="text/plain",
     )
+    
+    chunks = ""
 
     for chunk in client.models.generate_content_stream(
         model=model,
