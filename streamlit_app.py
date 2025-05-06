@@ -177,18 +177,24 @@ def scrape_naver_blog(pc_url: str) -> str:
 
     raise ValueError("본문 데이터를 찾지 못했습니다. HTML 구조를 재확인해 주세요.")
 
-def add_breaks_before_patterns(text):
+def insert_line_breaks(text):
     """
-    텍스트 중에서
-    1) 일련번호 형식(예: '1.', '2.' 등)이 나올 때
-    2) '한줄코멘트' 또는 '한줄 코멘트'가 나올 때
-    바로 앞에 줄바꿈을 삽입합니다.
+    주어진 텍스트에서 아래 세 경우에 줄바꿈을 삽입합니다:
+    1) 문장이 마침표로 끝난 직후
+    2) 일련번호(예: '1.')가 나오기 바로 앞
+    3) '한줄코멘트' 또는 '한줄 코멘트'가 나오기 바로 직전
     """
-    # 1) 숫자+마침표 앞에 줄바꿈
-    text = re.sub(r'\b(\d+\.)', r'\n\1', text)
-    # 2) '한줄코멘트' 또는 '한줄 코멘트' 앞에 줄바꿈
-    text = re.sub(r'(한줄\s*코멘트)', r'\n\1', text)
-    return text.lstrip('\n')
+    # 1) 문장이 마침표로 끝난 직후: '...' 뒤에 \n 추가
+    #    (?<!\n) 으로 이미 줄바꿈이 없는 경우만 처리
+    text = re.sub(r'(?<!\n)\.(?=\s|$)', r'.\n', text)
+
+    # 2) 일련번호 앞: '숫자+.' 앞에 \n 추가
+    text = re.sub(r'(?<!\n)(?=(\d+\.))', r'\n', text)
+
+    # 3) '한줄코멘트' 또는 '한줄 코멘트' 바로 직전: 앞에 \n 추가
+    text = re.sub(r'(?<!\n)(?=(한줄\s*코멘트))', r'\n', text)
+
+    return text
 
 if __name__ == "__main__":
 
@@ -204,7 +210,7 @@ if __name__ == "__main__":
 
     try:
         content_html = scrape_naver_blog(links[url])
-        content_html = add_breaks_before_patterns(content_html)
+        content_html = insert_line_breaks(content_html)
 
         st.subheader("=== 본문 ===")
         st.write(content_html)
