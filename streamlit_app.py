@@ -96,7 +96,7 @@ def print_blog_summary(response):
         sympathies = item.get('sympathyCnt', 0)
         # 본문은 첫 문장만 추출해 간략하게 보여줍니다.
         brief = item.get('briefContents', '').split('。')[0]
-        link = f"https://blog.naver.com/{blog_id}/{log_no}"
+        link = f"https://m.blog.naver.com/{blog_id}/{log_no}"
 
         # links.append(f"{link}")
         links[f"{title}"] = f"{link}"
