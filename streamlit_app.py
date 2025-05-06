@@ -227,11 +227,8 @@ def generate(api_key, text):
         contents=contents,
         config=generate_content_config,
     ):
-        chunks += chunk.text
-        st.write_stream(chunk.text)
-        time.sleep(0.1)
-    
-    return chunks
+        yield chunk.text + ""
+        time.sleep(0.02)
 
 
 if __name__ == "__main__":
@@ -250,10 +247,10 @@ if __name__ == "__main__":
         content_html = scrape_naver_blog(links[url])
 
         with st.status("Generating text..."):
-            content_text = generate(api_key, content_html)
+            st.write_stream(generate(api_key, content_html))
 
         # content_text = insert_line_breaks(content_html)
         # st.subheader("=== 본문 ===")
-        st.write(content_text)
+        # st.write(content_text)
     except Exception as e:
         st.write(f"오류 발생: {e}")
