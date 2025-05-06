@@ -227,6 +227,7 @@ def generate(api_key, text):
         config=generate_content_config,
     ):
         chunks += chunk.text
+        st.write_stream(str(chunk.text))
     
     return chunks
 
