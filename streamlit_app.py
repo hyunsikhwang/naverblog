@@ -227,7 +227,8 @@ def generate(api_key, text):
         contents=contents,
         config=generate_content_config,
     ):
-        yield chunk.text + ""
+        if chunk.text != None:
+            yield chunk.text + ""
         time.sleep(0.02)
 
 
@@ -246,8 +247,7 @@ if __name__ == "__main__":
     try:
         content_html = scrape_naver_blog(links[url])
 
-        with st.status("Generating text..."):
-            st.write_stream(generate(api_key, content_html))
+        st.write_stream(generate(api_key, content_html))
 
         # content_text = insert_line_breaks(content_html)
         # st.subheader("=== 본문 ===")
