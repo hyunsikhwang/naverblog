@@ -3,14 +3,18 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
+import base64
+import os
+from google import genai
+from google.genai import types
 
+
+api_key = st.secrets["api_key"]
 
 st.title("🎈 NAVER Blog Scraping")
 
 st.write("네이버 블로그의 본문 내용을 스크래핑합니다.")
 
-
-import requests
 
 def fetch_post_list(category_no=0, item_count=24, page=1, user_id="gomting"):
     """
@@ -196,6 +200,33 @@ def insert_line_breaks(text):
 
     return text
 
+def generate(api_key, text):
+    client = genai.Client(
+        api_key=api_key,
+    )
+
+    model = "gemma-3-27b-it"
+    contents = [
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(text=text),
+            ],
+        ),
+
+    ]
+    generate_content_config = types.GenerateContentConfig(
+        response_mime_type="text/plain",
+    )
+
+    for chunk in client.models.generate_content_stream(
+        model=model,
+        contents=contents,
+        config=generate_content_config,
+    ):
+        st.write_stream(chunk.text)
+
+
 if __name__ == "__main__":
 
     response = fetch_post_list()
@@ -210,9 +241,11 @@ if __name__ == "__main__":
 
     try:
         content_html = scrape_naver_blog(links[url])
-        content_html = insert_line_breaks(content_html)
 
-        st.subheader("=== 본문 ===")
-        st.write(content_html)
+        generate(api_key, content_html)
+
+        # content_html = insert_line_breaks(content_html)
+        # st.subheader("=== 본문 ===")
+        # st.write(content_html)
     except Exception as e:
         st.write(f"오류 발생: {e}")
