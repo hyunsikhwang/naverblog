@@ -224,7 +224,9 @@ def generate(api_key, text):
         contents=contents,
         config=generate_content_config,
     ):
-        st.write_stream(chunk.text)
+        chunks += chunk.text
+    
+    return chunks
 
 
 if __name__ == "__main__":
@@ -242,10 +244,10 @@ if __name__ == "__main__":
     try:
         content_html = scrape_naver_blog(links[url])
 
-        generate(api_key, content_html)
+        content_text = generate(api_key, content_html)
 
-        # content_html = insert_line_breaks(content_html)
+        # content_text = insert_line_breaks(content_html)
         # st.subheader("=== 본문 ===")
-        # st.write(content_html)
+        st.write(content_text)
     except Exception as e:
         st.write(f"오류 발생: {e}")
