@@ -236,7 +236,7 @@ def generate(api_key, content_html):
     ):
         if chunk.text != None:
             yield chunk.text + ""
-        time.sleep(0.02)
+        time.sleep(0.01)
 
 
 if __name__ == "__main__":
