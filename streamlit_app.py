@@ -190,7 +190,7 @@ if __name__ == "__main__":
     st.write(f"선택한 URL: {links[url]}")
 
     try:
-        content_html = scrape_naver_blog(url)
+        content_html = scrape_naver_blog(links[url])
         st.subheader("=== 본문 HTML ===")
         st.markdown(content_html)
     except Exception as e:
