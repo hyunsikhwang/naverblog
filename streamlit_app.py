@@ -3,114 +3,66 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
+import base64
+import os
 from google import genai
 from google.genai import types
 import time
 
-# --- 🎨 CSS 스타일 정의 ---
-css = """
-/* --- 전체 페이지 및 폰트 스타일 --- */
-body {
-    font-family: 'Pretendard', sans-serif;
-}
 
-/* --- Streamlit 기본 UI 숨기기 --- */
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
-
-/* --- 메인 앱 컨테이너 스타일 --- */
-.stApp {
-    background-color: #1a1a1a; /* 어두운 배경색 */
-    color: #fafafa; /* 밝은 텍스트 색상 */
-}
-
-/* --- 제목 스타일 --- */
-h1 {
-    color: #64ffda; /* 포인트 컬러 (민트) */
-    text-align: center;
-    font-weight: bold;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #333;
-}
-
-/* --- 설명 텍스트 스타일 --- */
-.st-emotion-cache-16idsys p {
-    text-align: center;
-    color: #a9a9a9;
-    font-size: 1.1rem;
-    padding-bottom: 20px;
-}
-
-/* --- Selectbox 스타일 --- */
-div[data-baseweb="select"] > div {
-    background-color: #262730;
-    border: 1px solid #444;
-    border-radius: 8px;
-    color: #fafafa;
-}
-div[data-baseweb="select"] > div:hover {
-    border-color: #64ffda;
-}
-
-/* --- 버튼 스타일 --- */
-.stButton>button {
-    width: 100%;
-    border: 2px solid #64ffda;
-    border-radius: 8px;
-    background-color: transparent;
-    color: #64ffda;
-    font-weight: bold;
-    padding: 10px 0;
-    transition: all 0.2s ease-in-out;
-}
-.stButton>button:hover {
-    background-color: #64ffda;
-    color: #1a1a1a;
-    border-color: #64ffda;
-}
-.stButton>button:active {
-    background-color: #52cca9;
-    border-color: #52cca9;
-}
-
-/* --- 결과 출력 영역 스타일 --- */
-.result-container {
-    background-color: #262730;
-    padding: 25px;
-    border-radius: 10px;
-    border: 1px solid #333;
-    margin-top: 20px;
-    line-height: 1.8; /* 줄 간격 조절로 가독성 향상 */
-}
-
-/* 결과 컨테이너 내의 마크다운 h-tag 색상 변경 */
-.result-container h2, .result-container h3, .result-container strong {
-    color: #64ffda;
-}
-
-/* 결과 컨테이너 내의 구분선 스타일 */
-.result-container hr {
-    border-top: 1px solid #444;
-}
-"""
-
-st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
-
-# Streamlit secrets에서 API 키 가져오기
 api_key = st.secrets["api_key"]
 
-st.title("🎈 NAVER Blog Scraper")
-st.write("네이버 블로그 포스트를 선택하면 본문을 요약 및 정리해 드립니다.")
+st.title("🎈 NAVER Blog Scraping")
+
+st.write("네이버 블로그의 본문 내용을 스크래핑합니다.")
 
 
 def fetch_post_list(category_no=0, item_count=24, page=1, user_id="gomting"):
-    url = f"https://m.blog.naver.com/api/blogs/{user_id}/post-list"
-    params = {"categoryNo": category_no, "itemCount": item_count, "page": page}
+    """
+    네이버 모바일 블로그 API에서 포스트 목록을 가져옵니다.
+    
+    Args:
+        category_no (int): 카테고리 번호 (기본값: 0)
+        item_count (int): 한 번에 가져올 아이템 수 (기본값: 24)
+        page (int): 페이지 번호 (기본값: 1)
+        user_id (str): 사용자 ID (예: "gomting")
+    
+    Returns:
+        dict or None: JSON 파싱 결과, 실패 시 None
+    """
+    url = "https://m.blog.naver.com/api/blogs/ranto28/post-list"
+    params = {
+        "categoryNo": category_no,
+        "itemCount": item_count,
+        "page": page,
+        "userId": user_id
+    }
+    # 주어진 모든 헤더를 그대로 반영
     headers = {
+        "Host": "m.blog.naver.com",
         "Accept": "application/json, text/plain, */*",
+        "Accept-Encoding": "gzip, deflate, br, zstd",
+        "Accept-Language": "ko,en-US;q=0.9,en;q=0.8",
+        # "Cookie": (
+        #     "NNB=7M2TKPQSXKWGC; stat_yn=1; BMR=s=1678195925790&r=https%3A%2F%2Fm.post.naver.com%2Fviewer%2FpostView.naver%3FmemberNo%3D37966086%26volumeNo%3D35583566"
+        #     "&r2=https%3A%2F%2Fwww.naver.com%2Fmy.html; ba.uuid=0; m_loc=11130e4b1b9a413a653df5ca74a909e251462cda8340fec489dba5f19fc140ca;"
+        #     'NV_WETR_LOCATION_RGN_M="MDIzNjAyNTY="; tooltipDisplayed=true; NFS=2; BA_DEVICE=61a4ec76-de32-4960-a16d-c11fc9aaef73;'
+        #     'NV_WETR_LAST_ACCESS_RGN_M="MDIzNjAyNTY="; nstore_session=pvYgGdc32RjrCi05sB8wWxA1; NID_AUT=bns3r5WpId46252AZmVwF64qnag9m4gF0QT9UQSdLmAAeZop4s0iV31BzJ6lB86D;'
+        #     "NID_JKL=h9Qg0W2Qc8jPtOMZvp/zrCMkSOzmP0SYyC/yZ+D3Q74=; ASID=738c015f000001947848ed1000000055; BNB_FINANCE_HOME_TOOLTIP_STOCK=true;"
+        #     "BNB_FINANCE_HOME_TOOLTIP_ESTATE=true; _ga=GA1.1.1795909208.1738987026; naverfinancial_CID=b3315d5dea424c45e3b8fb63a8f0f03a; _gcl_au=1.1.742333026.1738987026;"
+        #     "_tt_enable_cookie=1; _ttp=zLLgXYt97Q_3LsR_-nOWlsvuJZw.tt.1; _ga_Q7G1QTKPGB=GS1.1.1738987025.1.1.1738987043.0.0.0; NAC=r4UQBkQAcMI9;"
+        #     "_ga_K2ECMCJBFQ=GS1.1.1745140624.1.0.1745140629.0.0.0; _ga_SQ24F7Q7YW=GS1.1.1745140624.1.0.1745140629.0.0.0; JSESSIONID=E299B5F7A1237F4BBB6BBA65B118899D.jvm1;"
+        #     "SRT30=1746515923; page_uid=jtEI+wqo1fsssS855/wssssssAh-373171; NID_SES=AAABw+OSE8kAfR+cfS6+AGOLvkusjXoMrXSguKUGlZuS4wqvCr71CksIxzQ1Ec6aHeeyi3MwCCnq98jHXuAhug8HYzfsnWljppjjR1wnxfjuqCaigbwJOGTq8/Q05fR89QlGovxXVx1Ye/XUqy5lDtyIdRYsxfIeWBZjzGAc/xllozHTXA7flWSQ10ca0+C3oVEpaFPVWXLvDQlkHjzDGFpJBoJMbxml8/Aqgncw7OjyuJViF51a/D+ih28z6JUJkBARcxarnNURq1v4UD7LWW+jFtIamMIVbiFO3HsU64BvZyp/sNnt/8s017umcADw1fv5g25bWiHGnSrsbZsRdNNeaHUcIymCIbDCnfO+eBmUsR7NlvJKKJFK6a6XsN/5KKkNegQbQoy3GMaY2AIibDCCSquwmBnzSam5jE50p28EGDMoHNWZLxvoeEUQe1/E1fgksQZhNI99FYoa5f+gQjAYCOsB/ZOXo+tFxp1pJYzKv/aDDNBaBg6WSukzdzDxljE2tRZK2BfsWhbUpTbxr+aclIKSNt+M8XFcQvxYF51fvfzg4xlhFdpuZLNp3klyOVnTRTKTuIjzIAw94tZbl+CRzalDDtIBSJZIzWHm6DL/4EOe; nstore_pagesession=jtE/3sqrZpJVcwsMDZd-358989; SRT5=1746519782; BUC=E_CivUq4tO2ACvTvfwivm5O-ay0RIneThGnZi6r8Uwo="
+        # ),
+        "Referer": "https://m.blog.naver.com/ranto28?categoryNo=0&tab=1",
+        "Sec-CH-UA": '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+        "Sec-CH-UA-Mobile": "?0",
+        "Sec-CH-UA-Platform": '"macOS"',
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
-        "Referer": f"https://m.blog.naver.com/{user_id}?categoryNo={category_no}",
+        "Priority": "u=1, i"
     }
 
     try:
@@ -118,113 +70,196 @@ def fetch_post_list(category_no=0, item_count=24, page=1, user_id="gomting"):
         resp.raise_for_status()
         return resp.json()
     except requests.RequestException as e:
-        st.error(f"블로그 목록 요청 중 오류 발생: {e}")
+        print(f"요청 중 오류 발생: {e}")
     except ValueError:
-        st.error("응답을 JSON으로 파싱할 수 없습니다.")
+        print("응답을 JSON으로 파싱할 수 없습니다.")
+
     return None
 
-def get_post_links(response):
+def print_blog_summary(response):
     links = {}
-    if not response or not response.get('isSuccess', False):
-        st.warning("블로그 포스트 목록을 가져오는데 실패했습니다.")
-        return {}
-    items = response.get('result', {}).get('items', [])
+    """
+    네이버 블로그 JSON 응답에서 주요 항목만 간결하게 출력합니다.
+    """
+    # 요청 성공 여부 확인
+    if not response.get('isSuccess', False):
+        print("요청에 실패했습니다.")
+        return
+
+    result = response.get('result', {})
+    items = result.get('items', [])
+
     if not items:
-        st.info("해당 블로그에 표시할 게시글이 없습니다.")
-        return {}
+        print("표시할 게시글이 없습니다.")
+        return
+
     for item in items:
         blog_id = item.get('domainIdOrBlogId')
         log_no = item.get('logNo')
         title = item.get('titleWithInspectMessage', '<제목 없음>')
+        comments = item.get('commentCnt', 0)
+        sympathies = item.get('sympathyCnt', 0)
+        # 본문은 첫 문장만 추출해 간략하게 보여줍니다.
+        brief = item.get('briefContents', '').split('。')[0]
         link = f"https://m.blog.naver.com/{blog_id}/{log_no}"
-        links[title] = link
+
+        # links.append(f"{link}")
+        links[f"{title}"] = f"{link}"
+        # print(f"제목       : {title}")
+        # print(f"링크       : {link}")
+        # print(f"댓글/공감  : {comments}개  /  {sympathies}개")
+        # print(f"요약       : {brief}…")
+        # print("-" * 60)
+    
     return links
 
-def scrape_naver_blog(pc_url: str) -> str:
+def convert_to_mobile_url(pc_url: str) -> str:
+    """
+    PC 버전 네이버 블로그 URL을 모바일 버전 URL로 변환합니다.
+    예: https://blog.naver.com/아이디/포스트번호 -> https://m.blog.naver.com/아이디/포스트번호
+    """
+    if "blog.naver.com" not in pc_url:
+        raise ValueError("유효한 네이버 블로그 URL이 아닙니다.")
+    # URL이 이미 모바일 버전이면 그대로 반환
+    if "m.blog.naver.com" in pc_url:
+        return pc_url
+
+    # 간단하게 'blog.naver.com'을 'm.blog.naver.com'으로 대체합니다.
     mobile_url = pc_url.replace("blog.naver.com", "m.blog.naver.com")
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"}
-    try:
-        response = requests.get(mobile_url, headers=headers, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-        content_div = soup.find("div", {"class": "se-main-container"})
-        if content_div:
-            return content_div.get_text(separator='\n', strip=True)
-        else:
-            raise ValueError("본문 컨테이너(se-main-container)를 찾지 못했습니다.")
-    except requests.RequestException as e:
-        raise ConnectionError(f"페이지 요청 실패: {e}")
+    return mobile_url
 
-# --- ✨ 모델 변경 및 스트리밍 로직 적용 ---
+def scrape_naver_blog(pc_url: str) -> str:
+    """
+    네이버 블로그 PC 버전 URL을 받아, 모바일 페이지에서 본문 HTML을 추출합니다.
+    """
+    mobile_url = convert_to_mobile_url(pc_url)
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/98.0.4758.102 Safari/537.36"
+        )
+    }
+    response = requests.get(mobile_url, headers=headers)
+    if not response.ok:
+        raise ConnectionError(f"모바일 페이지 요청 실패: {response.status_code}")
+
+    html_text = response.text
+    soup = BeautifulSoup(html_text, "html.parser")
+
+    # 예제 1: 일반적인 본문 컨테이너 div를 활용하는 경우
+    content_div = soup.find("div", {"class": "se-main-container"})
+    if content_div:
+        # return str(content_div)
+        return content_div.get_text(separator='\n', strip=True)
+
+    # 예제 2: JSON 데이터가 포함된 <script> 태그에서 본문 추출 (예상 변수명이 __APOLLO_STATE__ 등)
+    # 아래 정규식은 예시이며, 실제 변수명과 구조는 HTML 소스 확인 후 수정 필요합니다.
+    pattern = re.compile(r'window\.__APOLLO_STATE__\s*=\s*(\{.*?\});', re.DOTALL)
+    match = pattern.search(html_text)
+    if match:
+        json_str = match.group(1).strip()
+        try:
+            data = json.loads(json_str)
+            # 데이터 구조에 따라 수정 필요: 예시로 postContent 혹은 content를 찾음
+            if "post" in data and "content" in data["post"]:
+                return data["post"]["content"]
+        except json.JSONDecodeError:
+            pass  # JSON 파싱 실패 시 아래 방법 사용
+
+    # 예제 3: iframe 구조인 경우, iframe의 src를 추출하여 추가 요청
+    iframe = soup.find("iframe")
+    if iframe and iframe.has_attr("src"):
+        iframe_src = iframe["src"]
+        iframe_response = requests.get(iframe_src, headers=headers)
+        if iframe_response.ok:
+            iframe_soup = BeautifulSoup(iframe_response.text, "html.parser")
+            # iframe 내에 본문이 있는지 확인 (예: div id="postViewArea")
+            iframe_content = iframe_soup.find("div", {"id": "postViewArea"})
+            if iframe_content:
+                return str(iframe_content)
+
+    raise ValueError("본문 데이터를 찾지 못했습니다. HTML 구조를 재확인해 주세요.")
+
+def insert_line_breaks(text):
+    """
+    주어진 텍스트에서 아래 세 경우에 줄바꿈을 삽입합니다:
+    1) 문장이 마침표로 끝난 직후
+    2) 일련번호(예: '1.')가 나오기 바로 앞
+    3) '한줄코멘트' 또는 '한줄 코멘트'가 나오기 바로 직전
+    """
+    # 1) 문장이 마침표로 끝난 직후: '...' 뒤에 \n 추가
+    #    (?<!\n) 으로 이미 줄바꿈이 없는 경우만 처리
+    text = re.sub(r'(?<!\n)\.(?=\s|$)', r'.\n', text)
+
+    # 2) 일련번호 앞: '숫자+.' 앞에 \n 추가
+    text = re.sub(r'(?<!\n)(?=(\d+\.))', r'\n', text)
+
+    # 3) '한줄코멘트' 또는 '한줄 코멘트' 바로 직전: 앞에 \n 추가
+    text = re.sub(r'(?<!\n)(?=(한줄\s*코멘트))', r'\n', text)
+
+    return text
+
 def generate(api_key, content_html):
-    """ gemma-3-27b-it 모델을 사용하여 스트리밍 방식으로 텍스트를 생성합니다. """
-    text = f"""다음 원문에서 '한줄 코멘트'를 추출해서 가장 먼저 보여주고, 나머지 내용은 문단에 맞춰 적절하게 줄바꿈을 삽입해줘. '한줄 코멘트'와 '본문'이라는 제목을 Markdown 형식으로 강조해줘. 원문의 내용은 절대 변경하지 마.
 
-포맷:
-**한줄 코멘트:** {{한줄 코멘트}}
+    text = """다음 원문에서 한줄 코멘트를 추출해서 맨 처음으로 보여주고, 나머지 내용들은 내용과 문단에 맞춰서 적절하게 빈줄을 삽입해서 다음과 같은 포맷으로 정리해주세요. 한줄 코멘트와 본문 내용은 원래의 내용에서 절대 변경하지 마세요.
+한줄 코멘트: {한줄 코멘트}
 
----
+본문
+{본문}
 
-**본문**
-{{본문}}
+원문: """+content_html
 
----
-원문: {content_html}
-"""
-    client = genai.Client(api_key=api_key)
-    model = "gemma-3-27b-it"  # 사용자 요청 모델로 변경
+    client = genai.Client(
+        api_key=api_key,
+    )
+
+    model = "gemma-3-27b-it"
     contents = [
         types.Content(
             role="user",
-            parts=[types.Part.from_text(text=text)],
+            parts=[
+                types.Part.from_text(text=text),
+            ],
         ),
+
     ]
     generate_content_config = types.GenerateContentConfig(
         response_mime_type="text/plain",
     )
+
+    chunks = ""
 
     for chunk in client.models.generate_content_stream(
         model=model,
         contents=contents,
         config=generate_content_config,
     ):
-        if chunk.text:
-            yield chunk.text
+        if chunk.text != None:
+            yield chunk.text + ""
         time.sleep(0.01)
 
-# --- 메인 실행 로직 ---
-if __name__ == "__main__":
-    response = fetch_post_list(user_id="ranto28") # 블로그 ID
-    
-    if response:
-        links = get_post_links(response)
-        if links:
-            with st.form(key='blog_form'):
-                selected_title = st.selectbox("정리할 블로그 포스트를 선택하세요:", options=list(links.keys()))
-                submit_button = st.form_submit_button(label="본문 정리 시작")
 
-            if submit_button and selected_title:
-                selected_url = links[selected_title]
-                
-                with st.spinner('블로그 본문을 가져오는 중...'):
-                    try:
-                        content_html = scrape_naver_blog(selected_url)
-                    except Exception as e:
-                        st.error(f"본문을 가져오는 중 오류가 발생했습니다: {e}")
-                        content_html = None
-                
-                if content_html:
-                    with st.spinner('AI가 본문을 정리하고 있습니다... 잠시만 기다려주세요.'):
-                        try:
-                            # st.empty()를 사용하여 스트리밍 결과를 담을 공간 확보
-                            result_placeholder = st.empty()
-                            full_response = ""
-                            # 스트리밍 응답을 수동으로 반복 처리
-                            for chunk in generate(api_key, content_html):
-                                full_response += chunk
-                                # 매번 전체 내용을 CSS 컨테이너와 함께 다시 그림
-                                result_placeholder.markdown(f'<div class="result-container">{full_response}</div>', unsafe_allow_html=True)
-                        except Exception as e:
-                            st.error(f"AI 모델 호출 중 오류가 발생했습니다: {e}")
+if __name__ == "__main__":
+
+    response = fetch_post_list()
+    if response:
+        links = print_blog_summary(response)
+        titles = list(links.keys())
     else:
-        st.error("블로그 데이터를 가져오지 못했습니다. 블로그 ID를 확인해주세요.")
+        st.write("데이터를 가져오지 못했습니다.")
+
+    url = st.selectbox("네이버 블로그 포스트를 선택하세요:", titles)
+    st.write(f"선택한 URL: {links[url]}")
+
+    try:
+        content_html = scrape_naver_blog(links[url])
+
+        st.write_stream(generate(api_key, content_html))
+
+        # content_text = insert_line_breaks(content_html)
+        # st.subheader("=== 본문 ===")
+        # st.write(content_text)
+    except Exception as e:
+        st.write(f"오류 발생: {e}")
