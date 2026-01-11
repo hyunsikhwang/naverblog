@@ -213,7 +213,7 @@ def generate(api_key, content_html):
         base_url="https://openrouter.ai/api/v1",
     )
 
-    model = "google/gemini-2.0-pro-exp-02-05:free" 
+    model = "xiaomi/mimo-v2-flash:free" 
     
     stream = client.chat.completions.create(
         model=model,
