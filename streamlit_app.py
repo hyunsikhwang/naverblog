@@ -213,7 +213,7 @@ def generate(api_key, content_html):
         base_url="https://openrouter.ai/api/v1",
     )
 
-    model = "google/gemini-2.0-flash-exp:free" 
+    model = "mistralai/mistral-small-24b-instruct-2501:free" 
     
     stream = client.chat.completions.create(
         model=model,
