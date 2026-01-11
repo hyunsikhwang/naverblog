@@ -5,8 +5,7 @@ import re
 import json
 import base64
 import os
-from google import genai
-from google.genai import types
+from openai import OpenAI
 import time
 
 
@@ -209,33 +208,24 @@ def generate(api_key, content_html):
 {본문}
 원문: """+content_html
 
-    client = genai.Client(
+    client = OpenAI(
         api_key=api_key,
+        base_url="https://openrouter.ai/api/v1",
     )
 
-    model = "gemma-3-27b-it"
-    contents = [
-        types.Content(
-            role="user",
-            parts=[
-                types.Part.from_text(text=text),
-            ],
-        ),
-
-    ]
-    generate_content_config = types.GenerateContentConfig(
-        response_mime_type="text/plain",
-    )
-
-    chunks = ""
-
-    for chunk in client.models.generate_content_stream(
+    model = "google/gemma-3-27b-it" 
+    
+    stream = client.chat.completions.create(
         model=model,
-        contents=contents,
-        config=generate_content_config,
-    ):
-        if chunk.text != None:
-            yield chunk.text + ""
+        messages=[
+            {"role": "user", "content": text},
+        ],
+        stream=True,
+    )
+
+    for chunk in stream:
+        if chunk.choices[0].delta.content is not None:
+            yield chunk.choices[0].delta.content
         time.sleep(0.01)
 
 
