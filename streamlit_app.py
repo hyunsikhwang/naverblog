@@ -11,9 +11,113 @@ import time
 
 api_key = st.secrets["api_key"]
 
+# Minimal + Modern CSS 스타일 추가
+st.markdown("""
+<style>
+    /* Minimal + Modern Design */
+    .main {
+        background-color: #f8f9fa;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+
+    /* 제목 스타일 */
+    h1 {
+        color: #2c3e50;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    /* 서브헤더 스타일 */
+    .stSubheader {
+        color: #34495e;
+        font-weight: 500;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+        border-left: 4px solid #3498db;
+        padding-left: 10px;
+    }
+
+    /* 선택 박스 스타일 */
+    .stSelectbox > div > div {
+        background-color: white;
+        border-radius: 8px;
+        border: 1px solid #e1e8ed;
+    }
+
+    /* 텍스트 영역 스타일 */
+    .stTextArea > div > div {
+        background-color: white;
+        border-radius: 8px;
+        border: 1px solid #e1e8ed;
+    }
+
+    /* 버튼 스타일 */
+    .stButton > button {
+        background-color: #3498db;
+        color: white;
+        border-radius: 8px;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .stButton > button:hover {
+        background-color: #2980b9;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    /* 코드 블록 스타일 */
+    .stCodeBlock {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e1e8ed;
+    }
+
+    /* 다운로드 버튼 스타일 */
+    .stDownloadButton > button {
+        background-color: #2ecc71;
+        color: white;
+        border-radius: 8px;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .stDownloadButton > button:hover {
+        background-color: #27ae60;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    /* 스피너 스타일 */
+    .stSpinner > div {
+        border-top-color: #3498db;
+    }
+
+    /* 일반 텍스트 스타일 */
+    .stMarkdown p {
+        color: #7f8c8d;
+        line-height: 1.6;
+    }
+
+    /* 링크 스타일 */
+    a {
+        color: #3498db;
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("🎈 NAVER Blog Scraping")
 
-st.write("네이버 블로그의 본문 내용을 스크래핑합니다.")
+st.write("네이버 블로그의 본문 내용을 스크래핑하고, OpenRouter를 통해 한줄 코멘트를 생성합니다.")
 
 
 def fetch_post_list(category_no=0, item_count=24, page=1, user_id="gomting"):
