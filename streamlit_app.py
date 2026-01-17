@@ -202,10 +202,8 @@ def insert_line_breaks(text):
 
 def generate(api_key, content_html):
 
-    text = """다음 원문에서 한줄 코멘트를 추출해서 맨 처음으로 보여주고, 나머지 내용들은 내용과 문단에 맞춰서 적절하게 빈줄을 삽입해서 다음과 같은 포맷으로 정리해주세요.
+    text = """다음 원문에서 한줄 코멘트만 정확하게 추출해서 출력해주세요.
 한줄 코멘트: {한줄 코멘트}
-본문
-{본문}
 원문: """+content_html
 
     client = OpenAI(
@@ -213,8 +211,8 @@ def generate(api_key, content_html):
         base_url="https://openrouter.ai/api/v1",
     )
 
-    model = "xiaomi/mimo-v2-flash:free" 
-    
+    model = "xiaomi/mimo-v2-flash:free"
+
     stream = client.chat.completions.create(
         model=model,
         messages=[
@@ -228,15 +226,51 @@ def generate(api_key, content_html):
             yield chunk.choices[0].delta.content
         time.sleep(0.01)
 
+def get_full_response(api_key, content_html):
+    """스트리밍 응답을 완전한 텍스트로 수집합니다."""
+    full_response = ""
+    for chunk in generate(api_key, content_html):
+        full_response += chunk
+    return full_response
+
+def extract_comment_and_original(full_response):
+    """응답에서 한줄 코멘트와 원문을 분리합니다."""
+    # 한줄 코멘트 추출
+    comment_match = re.search(r'한줄 코멘트:\s*(.*?)(?=\n원문:|$)', full_response, re.DOTALL)
+    comment = comment_match.group(1).strip() if comment_match else "한줄 코멘트를 찾을 수 없습니다."
+
+    # 원문 추출
+    original_match = re.search(r'원문:\s*(.*)', full_response, re.DOTALL)
+    original = original_match.group(1).strip() if original_match else "원문을 찾을 수 없습니다."
+
+    return comment, original
+
+def copy_to_clipboard(text):
+    """JavaScript를 사용하여 클립보드에 텍스트 복사"""
+    js = f"""
+    <script>
+    function copyToClipboard() {{
+        navigator.clipboard.writeText(`{text}`);
+        alert('원문이 클립보드에 복사되었습니다!');
+    }}
+    </script>
+    """
+    return js
+
 
 if __name__ == "__main__":
 
     response = fetch_post_list()
     if response:
         links = print_blog_summary(response)
-        titles = list(links.keys())
+        if links:  # links가 비어있지 않은지 확인
+            titles = list(links.keys())
+        else:
+            st.write("게시글 목록을 가져오지 못했습니다.")
+            st.stop()
     else:
         st.write("데이터를 가져오지 못했습니다.")
+        st.stop()
 
     url = st.selectbox("네이버 블로그 포스트를 선택하세요:", titles)
     st.write(f"선택한 URL: {links[url]}")
@@ -244,10 +278,31 @@ if __name__ == "__main__":
     try:
         content_html = scrape_naver_blog(links[url])
 
-        st.write_stream(generate(api_key, content_html))
+        # 스트리밍 응답을 완전한 텍스트로 수집
+        with st.spinner("OpenRouter 응답을 처리하는 중..."):
+            full_response = get_full_response(api_key, content_html)
 
-        # content_text = insert_line_breaks(content_html)
-        # st.subheader("=== 본문 ===")
-        # st.write(content_text)
+        # 한줄 코멘트와 원문 분리
+        comment, original = extract_comment_and_original(full_response)
+
+        # 한줄 코멘트 출력
+        st.subheader("📝 한줄 코멘트")
+        st.write(comment)
+
+        # 원문 출력
+        st.subheader("📄 원문")
+        st.text_area("원문 내용", original, height=300, key="original_text")
+
+        # 클립보드 복사 기능 (Streamlit 제한으로 인해 다운로드 버튼 제공)
+        st.download_button(
+            label="원문 복사 (텍스트 파일 다운로드)",
+            data=original,
+            file_name="original_text.txt",
+            mime="text/plain"
+        )
+
+        # 대안: 코드 블록으로 표시하여 복사 가능하게 함
+        st.code(original, language="text")
+
     except Exception as e:
         st.write(f"오류 발생: {e}")
