@@ -239,14 +239,20 @@ def extract_comment(full_response):
     comment = comment_match.group(1).strip() if comment_match else "한줄 코멘트를 찾을 수 없습니다."
     return comment
 
-def clean_content(content):
-    """불필요한 빈 줄을 제거하고 내용을 정리합니다."""
-    # 여러 개의 연속된 빈 줄을 하나의 빈 줄로 압축
-    content = re.sub(r'\n\s*\n', '\n\n', content)
-    # 내용 앞뒤의 빈 줄 제거
-    content = content.strip()
-    return content
+def remove_blank_lines(text: str) -> str:
+    # 1) Zero‑width space, BOM 같은 보이지 않는 문자 제거
+    for ch in ('\u200B', '\uFEFF'):
+        text = text.replace(ch, '')
 
+    # 2) 줄 구분을 모두 '\n' 으로 통일
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+
+    # 3) 완전히 공백만 있는 줄(탭, 스페이스, NBSP 등 포함) 제거
+    #    (?m) 멀티라인 모드, ^…$ 에 \s 를 써서 유니코드 공백 전부 매칭
+    cleaned = re.sub(r'(?m)^[\s\u00A0]*\n', '', text)
+
+    # 4) 앞뒤에 남은 빈 줄/공백 잘라내기
+    return cleaned.strip()
 
 if __name__ == "__main__":
 
@@ -269,7 +275,7 @@ if __name__ == "__main__":
         content_html = scrape_naver_blog(links[url])
 
         # 불필요한 빈 줄 제거
-        content_html = clean_content(content_html)
+        content_html = remove_blank_lines(content_html)
 
         # 스트리밍 응답을 완전한 텍스트로 수집
         with st.spinner("OpenRouter 응답을 처리하는 중..."):
