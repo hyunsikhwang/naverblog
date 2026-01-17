@@ -233,29 +233,11 @@ def get_full_response(api_key, content_html):
         full_response += chunk
     return full_response
 
-def extract_comment_and_original(full_response):
-    """응답에서 한줄 코멘트와 원문을 분리합니다."""
-    # 한줄 코멘트 추출
+def extract_comment(full_response):
+    """응답에서 한줄 코멘트만 추출합니다."""
     comment_match = re.search(r'한줄 코멘트:\s*(.*?)(?=\n원문:|$)', full_response, re.DOTALL)
     comment = comment_match.group(1).strip() if comment_match else "한줄 코멘트를 찾을 수 없습니다."
-
-    # 원문 추출
-    original_match = re.search(r'원문:\s*(.*)', full_response, re.DOTALL)
-    original = original_match.group(1).strip() if original_match else "원문을 찾을 수 없습니다."
-
-    return comment, original
-
-def copy_to_clipboard(text):
-    """JavaScript를 사용하여 클립보드에 텍스트 복사"""
-    js = f"""
-    <script>
-    function copyToClipboard() {{
-        navigator.clipboard.writeText(`{text}`);
-        alert('원문이 클립보드에 복사되었습니다!');
-    }}
-    </script>
-    """
-    return js
+    return comment
 
 
 if __name__ == "__main__":
@@ -282,27 +264,27 @@ if __name__ == "__main__":
         with st.spinner("OpenRouter 응답을 처리하는 중..."):
             full_response = get_full_response(api_key, content_html)
 
-        # 한줄 코멘트와 원문 분리
-        comment, original = extract_comment_and_original(full_response)
+        # 한줄 코멘트 추출
+        comment = extract_comment(full_response)
 
         # 한줄 코멘트 출력
         st.subheader("📝 한줄 코멘트")
         st.write(comment)
 
-        # 원문 출력
+        # 원문 출력 (content_html 직접 사용)
         st.subheader("📄 원문")
-        st.text_area("원문 내용", original, height=300, key="original_text")
+        st.text_area("원문 내용", content_html, height=300, key="original_text")
 
         # 클립보드 복사 기능 (Streamlit 제한으로 인해 다운로드 버튼 제공)
         st.download_button(
             label="원문 복사 (텍스트 파일 다운로드)",
-            data=original,
+            data=content_html,
             file_name="original_text.txt",
             mime="text/plain"
         )
 
         # 대안: 코드 블록으로 표시하여 복사 가능하게 함
-        st.code(original, language="text")
+        st.code(content_html, language="text")
 
     except Exception as e:
         st.write(f"오류 발생: {e}")
