@@ -239,6 +239,14 @@ def extract_comment(full_response):
     comment = comment_match.group(1).strip() if comment_match else "한줄 코멘트를 찾을 수 없습니다."
     return comment
 
+def clean_content(content):
+    """불필요한 빈 줄을 제거하고 내용을 정리합니다."""
+    # 여러 개의 연속된 빈 줄을 하나의 빈 줄로 압축
+    content = re.sub(r'\n\s*\n', '\n\n', content)
+    # 내용 앞뒤의 빈 줄 제거
+    content = content.strip()
+    return content
+
 
 if __name__ == "__main__":
 
@@ -260,6 +268,9 @@ if __name__ == "__main__":
     try:
         content_html = scrape_naver_blog(links[url])
 
+        # 불필요한 빈 줄 제거
+        content_html = clean_content(content_html)
+
         # 스트리밍 응답을 완전한 텍스트로 수집
         with st.spinner("OpenRouter 응답을 처리하는 중..."):
             full_response = get_full_response(api_key, content_html)
@@ -271,7 +282,7 @@ if __name__ == "__main__":
         st.subheader("📝 한줄 코멘트")
         st.write(comment)
 
-        # 원문 출력 (content_html 직접 사용)
+        # 원문 출력 (정리된 content_html 사용)
         st.subheader("📄 원문")
         st.text_area("원문 내용", content_html, height=300, key="original_text")
 
