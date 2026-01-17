@@ -290,6 +290,10 @@ if __name__ == "__main__":
 
         # 원문 출력 (정리된 content_html 사용)
         st.subheader("📄 원문")
+
+        # 대안: 코드 블록으로 표시하여 복사 가능하게 함
+        st.code(content_html, language="text")
+
         st.text_area("원문 내용", content_html, height=300, key="original_text")
 
         # 클립보드 복사 기능 (Streamlit 제한으로 인해 다운로드 버튼 제공)
@@ -299,9 +303,6 @@ if __name__ == "__main__":
             file_name="original_text.txt",
             mime="text/plain"
         )
-
-        # 대안: 코드 블록으로 표시하여 복사 가능하게 함
-        st.code(content_html, language="text")
 
     except Exception as e:
         st.write(f"오류 발생: {e}")
