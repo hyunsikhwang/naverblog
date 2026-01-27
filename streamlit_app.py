@@ -315,7 +315,7 @@ def generate(api_key, content_html):
         base_url="https://openrouter.ai/api/v1",
     )
 
-    model = "moonshotai/kimi-k2:free"
+    model = "openai/gpt-oss-120b:free"
 
     stream = client.chat.completions.create(
         model=model,
