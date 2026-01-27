@@ -315,7 +315,7 @@ def generate(api_key, content_html):
         base_url="https://openrouter.ai/api/v1",
     )
 
-    model = "xiaomi/mimo-v2-flash:free"
+    model = "deepseek/deepseek-r1-0528:free"
 
     stream = client.chat.completions.create(
         model=model,
