@@ -309,11 +309,27 @@ def insert_line_breaks(text):
 
     return text
 
-def generate(api_key, content_html):
+def generate(api_key, content_html, is_ranto28=True):
 
-    text = """다음 원문에서 한줄 코멘트만 정확하게 추출해서 출력해주세요.
-한줄 코멘트: {한줄 코멘트}
-원문: """+content_html
+    if is_ranto28:
+        prompt_text = f"""다음 원문에서 한줄 코멘트만 정확하게 추출해서 출력해주세요.
+한줄 코멘트: {{한줄 코멘트}}
+원문: {content_html}"""
+    else:
+        # For other blogs, provide Implications and 5-10 bullet points
+        prompt_text = f"""다음 원문 내용을 분석하여 '시사점'과 함께 5개에서 10개 사이의 핵심 내용을 불렛 포인트(bullet points)로 요약해 주세요.
+텍스트의 분량에 따라 불렛 포인트 개수를 5개에서 10개 사이로 적절히 조절해 주세요.
+
+형식:
+[시사점]
+(여기에 시사점 내용 작성)
+
+[핵심 요약]
+- (핵심 내용 1)
+- (핵심 내용 2)
+...
+
+원문: {content_html}"""
 
     client = OpenAI(
         api_key=api_key,
@@ -325,7 +341,7 @@ def generate(api_key, content_html):
     stream = client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "user", "content": text},
+            {"role": "user", "content": prompt_text},
         ],
         stream=True,
     )
@@ -335,10 +351,10 @@ def generate(api_key, content_html):
             yield chunk.choices[0].delta.content
         time.sleep(0.01)
 
-def get_full_response(api_key, content_html):
+def get_full_response(api_key, content_html, is_ranto28=True):
     """스트리밍 응답을 완전한 텍스트로 수집합니다."""
     full_response = ""
-    for chunk in generate(api_key, content_html):
+    for chunk in generate(api_key, content_html, is_ranto28):
         full_response += chunk
     return full_response
 
@@ -400,20 +416,26 @@ if __name__ == "__main__":
                 post_url = links[selected_title]
                 display_title = selected_title
                 
+            is_ranto28 = "ranto28" in post_url
+            
             content_text = scrape_naver_blog(post_url)
             content_text = remove_blank_lines(content_text)
             
             # AI Inference
-            full_response = get_full_response(api_key, content_text)
-            comment = extract_comment(full_response)
+            full_response = get_full_response(api_key, content_text, is_ranto28=is_ranto28)
+            
+            if is_ranto28:
+                summary_content = extract_comment(full_response)
+            else:
+                summary_content = full_response
 
         with col1:
             st.markdown('<div class="section-header">📝 AI Summary <span class="status-badge">Powered by GPT-4</span></div>', unsafe_allow_html=True)
             st.markdown(f"""
             <div class="glass-card">
-                <p style="font-size: 1.1rem; line-height: 1.6; color: #1e293b; font-weight: 500;">
-                    {comment}
-                </p>
+                <div style="font-size: 1.1rem; line-height: 1.6; color: #1e293b; font-weight: 500; white-space: pre-wrap;">
+                    {summary_content}
+                </div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -428,6 +450,37 @@ if __name__ == "__main__":
 
         with col2:
             st.markdown('<div class="section-header">📄 Original Content</div>', unsafe_allow_html=True)
+            
+            # Clipboard Copy Button implementation
+            import json
+            
+            # Use columns for labels and copy button
+            c1, c2 = st.columns([3, 1])
+            with c2:
+                # Custom JS for clipboard copy
+                safe_text = json.dumps(content_text)
+                copy_button_html = f"""
+                <button onclick='navigator.clipboard.writeText({safe_text})' style="
+                    background-color: #4f46e5;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-family: 'Inter', sans-serif;
+                    font-size: 0.8rem;
+                    float: right;
+                ">📋 Copy Content</button>
+                """
+                st.components.v1.html(f"""
+                <style>
+                    button:hover {{
+                        background-color: #4338ca !important;
+                    }}
+                </style>
+                {copy_button_html}
+                """, height=50)
+
             st.markdown(f"""
             <div class="glass-card" style="height: 500px; overflow-y: auto;">
                 <pre style="white-space: pre-wrap; font-family: 'Inter', sans-serif; font-size: 0.9rem; color: #475569;">
