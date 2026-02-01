@@ -20,6 +20,12 @@ st.markdown("""
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     }
 
+    /* Reduce top margin */
+    .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 0rem !important;
+    }
+
     /* 제목 스타일 */
     h1 {
         color: #2c3e50;
