@@ -56,14 +56,14 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-family: 'Outfit', sans-serif;
-        font-size: 3.5rem;
+        font-size: 2.5rem;
         font-weight: 800;
         margin-bottom: 0.5rem;
     }
 
     .subtitle {
         color: var(--text-secondary);
-        font-size: 1.1rem;
+        font-size: 0.9rem;
         font-weight: 500;
     }
 
@@ -74,9 +74,9 @@ st.markdown("""
         -webkit-backdrop-filter: blur(10px);
         border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.3);
-        padding: 1.5rem;
+        padding: 1rem;
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
@@ -110,10 +110,10 @@ st.markdown("""
     /* Section Headers */
     .section-header {
         font-family: 'Outfit', sans-serif;
-        font-size: 1.5rem;
+        font-size: 1.2rem;
         font-weight: 700;
         color: var(--text-main);
-        margin-bottom: 1rem;
+        margin-bottom: 0.8rem;
         display: flex;
         align-items: center;
         gap: 0.5rem;
@@ -122,9 +122,9 @@ st.markdown("""
     .status-badge {
         background: #ecfdf5;
         color: #059669;
-        padding: 0.25rem 0.75rem;
+        padding: 0.2rem 0.6rem;
         border-radius: 9999px;
-        font-size: 0.8rem;
+        font-size: 0.7rem;
         font-weight: 600;
     }
 </style>
@@ -323,9 +323,10 @@ def generate(api_key, content_html, is_ranto28=True):
 결과는 반드시 HTML 형식으로만 작성하고, ```html 같은 코드 블록 태그나 마크다운 서식을 절대 사용하지 마세요.
 
 형식 지침:
-1. '시사점' 부분은 <h3 style='margin-bottom: 10px; color: #4f46e5;'>[시사점]</h3> 뒤에 내용을 작성하세요.
-2. '핵심 요약' 부분은 <h3 style='margin-top: 20px; margin-bottom: 10px; color: #4f46e5;'>[핵심 요약]</h3> 뒤에 <ul>과 <li> 태그를 사용하여 5~10개의 불렛 포인트로 작성하세요.
-3. 전체 결과는 하나의 HTML 조각이어야 합니다.
+1. '시사점' 부분은 <h4 style='margin-bottom: 8px; color: #4f46e5;'>[시사점]</h4> 뒤에 내용을 작성하세요.
+2. '핵심 요약' 부분은 <h4 style='margin-top: 15px; margin-bottom: 8px; color: #4f46e5;'>[핵심 요약]</h4> 뒤에 <ul>과 <li> 태그를 사용하여 5~10개의 불렛 포인트로 작성하세요.
+3. 모든 텍스트는 <p> 또는 <li> 태그 안에 작성하세요.
+4. 전체 결과는 하나의 HTML 조각이어야 합니다.
 
 원문: {content_html}"""
 
@@ -431,7 +432,7 @@ if __name__ == "__main__":
             st.markdown('<div class="section-header">📝 AI Summary <span class="status-badge">Powered by GPT-4</span></div>', unsafe_allow_html=True)
             st.markdown(f"""
             <div class="glass-card">
-                <div style="font-size: 1.1rem; line-height: 1.6; color: #1e293b; font-weight: 500; white-space: pre-wrap;">
+                <div style="font-size: 0.9rem; line-height: 1.6; color: #1e293b; font-weight: 500; white-space: pre-wrap;">
                     {summary_content}
                 </div>
             </div>
@@ -466,7 +467,7 @@ if __name__ == "__main__":
                     border-radius: 8px;
                     cursor: pointer;
                     font-family: 'Inter', sans-serif;
-                    font-size: 0.8rem;
+                    font-size: 0.7rem;
                     float: right;
                 ">📋 Copy Content</button>
                 """
@@ -481,7 +482,7 @@ if __name__ == "__main__":
 
             st.markdown(f"""
             <div class="glass-card" style="height: 500px; overflow-y: auto;">
-                <pre style="white-space: pre-wrap; font-family: 'Inter', sans-serif; font-size: 0.9rem; color: #475569;">
+                <pre style="white-space: pre-wrap; font-family: 'Inter', sans-serif; font-size: 0.8rem; color: #475569;">
 {content_text}
                 </pre>
             </div>
