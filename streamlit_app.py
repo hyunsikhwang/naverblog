@@ -12,118 +12,122 @@ import time
 api_key = st.secrets["api_key"]
 
 # Minimal + Modern CSS 스타일 추가
+st.set_page_config(
+    page_title="Naver Blog AI Scraper",
+    page_icon="🎈",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Premium Modern CSS using Google Fonts and Glassmorphism
 st.markdown("""
 <style>
-    /* Minimal + Modern Design */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+
+    :root {
+        --primary: #4f46e5;
+        --primary-hover: #4338ca;
+        --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        --card-bg: rgba(255, 255, 255, 0.8);
+        --text-main: #1e293b;
+        --text-secondary: #64748b;
+        --accent: #10b981;
+    }
+
     .main {
-        background-color: #f8f9fa;
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        background: var(--bg-gradient);
+        font-family: 'Inter', sans-serif;
     }
 
-    /* Reduce top margin */
-    .block-container {
-        padding-top: 2rem !important;
-        padding-bottom: 0rem !important;
+    /* Gradient Header */
+    .header-container {
+        padding: 2rem 0;
+        text-align: center;
     }
-
-    /* 제목 스타일 */
-    h1 {
-        color: #2c3e50;
-        font-weight: 600;
-        margin-bottom: 1rem;
-    }
-
-    /* 서브헤더 스타일 */
-    .stSubheader {
-        color: #34495e;
-        font-weight: 500;
-        margin-top: 1.5rem;
+    
+    .gradient-text {
+        background: linear-gradient(90deg, #4f46e5, #0ea5e9);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-family: 'Outfit', sans-serif;
+        font-size: 3.5rem;
+        font-weight: 800;
         margin-bottom: 0.5rem;
-        border-left: 4px solid #3498db;
-        padding-left: 10px;
     }
 
-    /* 선택 박스 스타일 */
-    .stSelectbox > div > div {
-        background-color: white;
-        border-radius: 8px;
-        border: 1px solid #e1e8ed;
-    }
-
-    /* 텍스트 영역 스타일 */
-    .stTextArea > div > div {
-        background-color: white;
-        border-radius: 8px;
-        border: 1px solid #e1e8ed;
-    }
-
-    /* 버튼 스타일 */
-    .stButton > button {
-        background-color: #3498db;
-        color: white;
-        border-radius: 8px;
-        border: none;
-        padding: 0.5rem 1.5rem;
+    .subtitle {
+        color: var(--text-secondary);
+        font-size: 1.1rem;
         font-weight: 500;
+    }
+
+    /* Glassmorphism Card Style */
+    .glass-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 1.5rem;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        margin-bottom: 1.5rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .glass-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.1);
+    }
+
+    /* Customizing Streamlit Components */
+    .stSelectbox label, .stTextArea label {
+        font-weight: 600 !important;
+        color: var(--text-main) !important;
+    }
+
+    .stButton > button {
+        background: linear-gradient(90deg, #4f46e5, #4338ca);
+        color: white;
+        border-radius: 12px;
+        border: none;
+        padding: 0.6rem 2rem;
+        font-weight: 600;
+        width: 100%;
         transition: all 0.3s ease;
     }
 
     .stButton > button:hover {
-        background-color: #2980b9;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        background: linear-gradient(90deg, #4338ca, #3730a3);
+        transform: scale(1.02);
     }
 
-    /* 코드 블록 스타일 */
-    .stCodeBlock {
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        border: 1px solid #e1e8ed;
+    /* Section Headers */
+    .section-header {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
-    /* 다운로드 버튼 스타일 */
-    .stDownloadButton > button {
-        background-color: #2ecc71;
-        color: white;
-        border-radius: 8px;
-        border: none;
-        padding: 0.5rem 1.5rem;
-        font-weight: 500;
-        transition: all 0.3s ease;
-    }
-
-    .stDownloadButton > button:hover {
-        background-color: #27ae60;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-
-    /* 스피너 스타일 */
-    .stSpinner > div {
-        border-top-color: #3498db;
-    }
-
-    /* 일반 텍스트 스타일 */
-    .stMarkdown p {
-        color: #7f8c8d;
-        line-height: 1.6;
-    }
-
-    /* 링크 스타일 */
-    a {
-        color: #3498db;
-        text-decoration: none;
-    }
-
-    a:hover {
-        text-decoration: underline;
+    .status-badge {
+        background: #ecfdf5;
+        color: #059669;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 600;
     }
 </style>
+
+<div class="header-container">
+    <h1 class="gradient-text">Naver Blog Scraper</h1>
+    <p class="subtitle">AI-powered insights from Naver's most popular blogs</p>
+</div>
 """, unsafe_allow_html=True)
-
-st.title("🎈 NAVER Blog Scraping")
-
-st.write("네이버 블로그의 본문 내용을 스크래핑하고, OpenRouter를 통해 한줄 코멘트를 생성합니다.")
 
 
 def fetch_post_list(category_no=0, item_count=24, page=1, user_id="gomting"):
@@ -321,7 +325,7 @@ def generate(api_key, content_html):
         base_url="https://openrouter.ai/api/v1",
     )
 
-    model = "xiaomi/mimo-v2-flash:free"
+    model = "openai/gpt-oss-120b:free"
 
     stream = client.chat.completions.create(
         model=model,
@@ -365,54 +369,66 @@ def remove_blank_lines(text: str) -> str:
     return cleaned.strip()
 
 if __name__ == "__main__":
-
-    response = fetch_post_list()
-    if response:
-        links = print_blog_summary(response)
-        if links:  # links가 비어있지 않은지 확인
-            titles = list(links.keys())
+    # Settings in Sidebar
+    with st.sidebar:
+        st.markdown('<div class="section-header">⚙️ Settings</div>', unsafe_allow_html=True)
+        
+        response = fetch_post_list()
+        if response:
+            links = print_blog_summary(response)
+            if links:
+                titles = list(links.keys())
+                selected_title = st.selectbox("Select a Post:", titles)
+                st.info(f"🔗 [Open Original Post]({links[selected_title]})")
+            else:
+                st.error("Could not fetch post list.")
+                st.stop()
         else:
-            st.write("게시글 목록을 가져오지 못했습니다.")
+            st.error("Failed to connect to Naver API.")
             st.stop()
-    else:
-        st.write("데이터를 가져오지 못했습니다.")
-        st.stop()
 
-    url = st.selectbox("네이버 블로그 포스트를 선택하세요:", titles)
-    st.write(f"선택한 URL: {links[url]}")
+    # Main Content Area
+    col1, col2 = st.columns([1, 1], gap="large")
 
     try:
-        content_html = scrape_naver_blog(links[url])
+        with st.spinner("✨ AI is analyzing the post..."):
+            post_url = links[selected_title]
+            content_text = scrape_naver_blog(post_url)
+            content_text = remove_blank_lines(content_text)
+            
+            # AI Inference
+            full_response = get_full_response(api_key, content_text)
+            comment = extract_comment(full_response)
 
-        # 불필요한 빈 줄 제거
-        content_html = remove_blank_lines(content_html)
+        with col1:
+            st.markdown('<div class="section-header">📝 AI Summary <span class="status-badge">Powered by GPT-4</span></div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="glass-card">
+                <p style="font-size: 1.1rem; line-height: 1.6; color: #1e293b; font-weight: 500;">
+                    {comment}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown('<div class="section-header">📥 Export</div>', unsafe_allow_html=True)
+            st.download_button(
+                label="Download Original Content (.txt)",
+                data=content_text,
+                file_name=f"{selected_title}.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
 
-        # 스트리밍 응답을 완전한 텍스트로 수집
-        with st.spinner("OpenRouter 응답을 처리하는 중..."):
-            full_response = get_full_response(api_key, content_html)
-
-        # 한줄 코멘트 추출
-        comment = extract_comment(full_response)
-
-        # 한줄 코멘트 출력
-        st.subheader("📝 한줄 코멘트")
-        st.write(comment)
-
-        # 원문 출력 (정리된 content_html 사용)
-        st.subheader("📄 원문")
-
-        # 대안: 코드 블록으로 표시하여 복사 가능하게 함
-        st.code(content_html, language="text")
-
-        st.text_area("원문 내용", content_html, height=300, key="original_text")
-
-        # 클립보드 복사 기능 (Streamlit 제한으로 인해 다운로드 버튼 제공)
-        st.download_button(
-            label="원문 복사 (텍스트 파일 다운로드)",
-            data=content_html,
-            file_name="original_text.txt",
-            mime="text/plain"
-        )
+        with col2:
+            st.markdown('<div class="section-header">📄 Original Content</div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="glass-card" style="height: 500px; overflow-y: auto;">
+                <pre style="white-space: pre-wrap; font-family: 'Inter', sans-serif; font-size: 0.9rem; color: #475569;">
+{content_text}
+                </pre>
+            </div>
+            """, unsafe_allow_html=True)
 
     except Exception as e:
-        st.write(f"오류 발생: {e}")
+        st.error(f"An error occurred: {e}")
+        st.exception(e)
