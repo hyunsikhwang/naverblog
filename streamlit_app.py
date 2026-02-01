@@ -39,9 +39,15 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
 
+    /* Reduce top margin */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0rem !important;
+    }
+
     /* Gradient Header */
     .header-container {
-        padding: 2rem 0;
+        padding: 1rem 0;
         text-align: center;
     }
     
@@ -156,17 +162,6 @@ def fetch_post_list(category_no=0, item_count=24, page=1, user_id="gomting"):
         "Accept": "application/json, text/plain, */*",
         "Accept-Encoding": "gzip, deflate, br, zstd",
         "Accept-Language": "ko,en-US;q=0.9,en;q=0.8",
-        # "Cookie": (
-        #     "NNB=7M2TKPQSXKWGC; stat_yn=1; BMR=s=1678195925790&r=https%3A%2F%2Fm.post.naver.com%2Fviewer%2FpostView.naver%3FmemberNo%3D37966086%26volumeNo%3D35583566"
-        #     "&r2=https%3A%2F%2Fwww.naver.com%2Fmy.html; ba.uuid=0; m_loc=11130e4b1b9a413a653df5ca74a909e251462cda8340fec489dba5f19fc140ca;"
-        #     'NV_WETR_LOCATION_RGN_M="MDIzNjAyNTY="; tooltipDisplayed=true; NFS=2; BA_DEVICE=61a4ec76-de32-4960-a16d-c11fc9aaef73;'
-        #     'NV_WETR_LAST_ACCESS_RGN_M="MDIzNjAyNTY="; nstore_session=pvYgGdc32RjrCi05sB8wWxA1; NID_AUT=bns3r5WpId46252AZmVwF64qnag9m4gF0QT9UQSdLmAAeZop4s0iV31BzJ6lB86D;'
-        #     "NID_JKL=h9Qg0W2Qc8jPtOMZvp/zrCMkSOzmP0SYyC/yZ+D3Q74=; ASID=738c015f000001947848ed1000000055; BNB_FINANCE_HOME_TOOLTIP_STOCK=true;"
-        #     "BNB_FINANCE_HOME_TOOLTIP_ESTATE=true; _ga=GA1.1.1795909208.1738987026; naverfinancial_CID=b3315d5dea424c45e3b8fb63a8f0f03a; _gcl_au=1.1.742333026.1738987026;"
-        #     "_tt_enable_cookie=1; _ttp=zLLgXYt97Q_3LsR_-nOWlsvuJZw.tt.1; _ga_Q7G1QTKPGB=GS1.1.1738987025.1.1.1738987043.0.0.0; NAC=r4UQBkQAcMI9;"
-        #     "_ga_K2ECMCJBFQ=GS1.1.1745140624.1.0.1745140629.0.0.0; _ga_SQ24F7Q7YW=GS1.1.1745140624.1.0.1745140629.0.0.0; JSESSIONID=E299B5F7A1237F4BBB6BBA65B118899D.jvm1;"
-        #     "SRT30=1746515923; page_uid=jtEI+wqo1fsssS855/wssssssAh-373171; NID_SES=AAABw+OSE8kAfR+cfS6+AGOLvkusjXoMrXSguKUGlZuS4wqvCr71CksIxzQ1Ec6aHeeyi3MwCCnq98jHXuAhug8HYzfsnWljppjjR1wnxfjuqCaigbwJOGTq8/Q05fR89QlGovxXVx1Ye/XUqy5lDtyIdRYsxfIeWBZjzGAc/xllozHTXA7flWSQ10ca0+C3oVEpaFPVWXLvDQlkHjzDGFpJBoJMbxml8/Aqgncw7OjyuJViF51a/D+ih28z6JUJkBARcxarnNURq1v4UD7LWW+jFtIamMIVbiFO3HsU64BvZyp/sNnt/8s017umcADw1fv5g25bWiHGnSrsbZsRdNNeaHUcIymCIbDCnfO+eBmUsR7NlvJKKJFK6a6XsN/5KKkNegQbQoy3GMaY2AIibDCCSquwmBnzSam5jE50p28EGDMoHNWZLxvoeEUQe1/E1fgksQZhNI99FYoa5f+gQjAYCOsB/ZOXo+tFxp1pJYzKv/aDDNBaBg6WSukzdzDxljE2tRZK2BfsWhbUpTbxr+aclIKSNt+M8XFcQvxYF51fvfzg4xlhFdpuZLNp3klyOVnTRTKTuIjzIAw94tZbl+CRzalDDtIBSJZIzWHm6DL/4EOe; nstore_pagesession=jtE/3sqrZpJVcwsMDZd-358989; SRT5=1746519782; BUC=E_CivUq4tO2ACvTvfwivm5O-ay0RIneThGnZi6r8Uwo="
-        # ),
         "Referer": "https://m.blog.naver.com/ranto28?categoryNo=0&tab=1",
         "Sec-CH-UA": '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
         "Sec-CH-UA-Mobile": "?0",
