@@ -309,7 +309,7 @@ def insert_line_breaks(text):
 
     return text
 
-def generate(api_key, content_html, is_ranto28=True):
+def generate(api_key, content_html, is_ranto28=True, model="openai/gpt-oss-120b:free"):
 
     if is_ranto28:
         prompt_text = f"""다음 원문에서 한줄 코멘트만 정확하게 추출해서 HTML 형식으로 출력해주세요. 
@@ -335,25 +335,28 @@ def generate(api_key, content_html, is_ranto28=True):
         base_url="https://openrouter.ai/api/v1",
     )
 
-    model = "openai/gpt-oss-120b:free"
+    try:
+        stream = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "user", "content": prompt_text},
+            ],
+            stream=True,
+        )
 
-    stream = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "user", "content": prompt_text},
-        ],
-        stream=True,
-    )
+        for chunk in stream:
+            if chunk.choices[0].delta.content is not None:
+                yield chunk.choices[0].delta.content
+            time.sleep(0.01)
+    except Exception as e:
+        yield f"<div style='color: #ef4444; padding: 10px; border: 1px solid #fee2e2; border-radius: 8px; background: #fff1f1;'><strong>AI Model Error:</strong> {str(e)}<br><br>무료 모델은 서버 상황에 따라 일시적으로 제한될 수 있습니다. 사이드바에서 다른 모델(예: Gemini 2.0 Flash)로 변경하거나 잠시 후 다시 시도해 주세요.</div>"
 
-    for chunk in stream:
-        if chunk.choices[0].delta.content is not None:
-            yield chunk.choices[0].delta.content
-        time.sleep(0.01)
 
-def get_full_response(api_key, content_html, is_ranto28=True):
+
+def get_full_response(api_key, content_html, is_ranto28=True, model="openai/gpt-oss-120b:free"):
     """스트리밍 응답을 완전한 텍스트로 수집합니다."""
     full_response = ""
-    for chunk in generate(api_key, content_html, is_ranto28):
+    for chunk in generate(api_key, content_html, is_ranto28, model):
         full_response += chunk
     return full_response
 
@@ -384,6 +387,15 @@ if __name__ == "__main__":
         st.markdown('<div class="section-header">⚙️ Settings</div>', unsafe_allow_html=True)
         
         custom_url = st.text_input("Custom Naver Blog URL (Optional):", placeholder="https://blog.naver.com/...")
+        
+        model_options = {
+            "GPT-OSS 120B (Free)": "openai/gpt-oss-120b:free",
+            "Gemini 2.0 Flash (Free)": "google/gemini-2.0-flash-exp:free",
+            "Mistral 7B (Free)": "mistralai/mistral-7b-instruct:free",
+            "Gemma 2 9B (Free)": "google/gemma-2-9b-it:free"
+        }
+        selected_model_name = st.selectbox("Select AI Model:", list(model_options.keys()))
+        selected_model = model_options[selected_model_name]
         
         response = fetch_post_list()
         if response:
@@ -421,7 +433,7 @@ if __name__ == "__main__":
             content_text = remove_blank_lines(content_text)
             
             # AI Inference
-            full_response = get_full_response(api_key, content_text, is_ranto28=is_ranto28)
+            full_response = get_full_response(api_key, content_text, is_ranto28=is_ranto28, model=selected_model)
             
             if is_ranto28:
                 summary_content = extract_comment(full_response)
