@@ -312,22 +312,20 @@ def insert_line_breaks(text):
 def generate(api_key, content_html, is_ranto28=True):
 
     if is_ranto28:
-        prompt_text = f"""다음 원문에서 한줄 코멘트만 정확하게 추출해서 출력해주세요.
-한줄 코멘트: {{한줄 코멘트}}
+        prompt_text = f"""다음 원문에서 한줄 코멘트만 정확하게 추출해서 HTML 형식으로 출력해주세요. 
+마크다운 서식을 절대 사용하지 말고, 결과만 텍스트로 반환하세요. 필요하다면 <strong> 태그만 사용 가능합니다.
+반드시 다음 형식을 지키세요: 한줄 코멘트: (내용)
+
 원문: {content_html}"""
     else:
-        # For other blogs, provide Implications and 5-10 bullet points
-        prompt_text = f"""다음 원문 내용을 분석하여 '시사점'과 함께 5개에서 10개 사이의 핵심 내용을 불렛 포인트(bullet points)로 요약해 주세요.
-텍스트의 분량에 따라 불렛 포인트 개수를 5개에서 10개 사이로 적절히 조절해 주세요.
+        # For other blogs, provide Implications and 5-10 bullet points in HTML
+        prompt_text = f"""다음 원문 내용을 분석하여 '시사점'과 함께 핵심 내용을 요약해 주세요. 
+결과는 반드시 HTML 형식으로만 작성하고, ```html 같은 코드 블록 태그나 마크다운 서식을 절대 사용하지 마세요.
 
-형식:
-[시사점]
-(여기에 시사점 내용 작성)
-
-[핵심 요약]
-- (핵심 내용 1)
-- (핵심 내용 2)
-...
+형식 지침:
+1. '시사점' 부분은 <h3 style='margin-bottom: 10px; color: #4f46e5;'>[시사점]</h3> 뒤에 내용을 작성하세요.
+2. '핵심 요약' 부분은 <h3 style='margin-top: 20px; margin-bottom: 10px; color: #4f46e5;'>[핵심 요약]</h3> 뒤에 <ul>과 <li> 태그를 사용하여 5~10개의 불렛 포인트로 작성하세요.
+3. 전체 결과는 하나의 HTML 조각이어야 합니다.
 
 원문: {content_html}"""
 
