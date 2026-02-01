@@ -368,13 +368,19 @@ if __name__ == "__main__":
     with st.sidebar:
         st.markdown('<div class="section-header">⚙️ Settings</div>', unsafe_allow_html=True)
         
+        custom_url = st.text_input("Custom Naver Blog URL (Optional):", placeholder="https://blog.naver.com/...")
+        
         response = fetch_post_list()
         if response:
             links = print_blog_summary(response)
             if links:
                 titles = list(links.keys())
-                selected_title = st.selectbox("Select a Post:", titles)
-                st.info(f"🔗 [Open Original Post]({links[selected_title]})")
+                selected_title = st.selectbox("Or Select from Recent Posts:", titles)
+                
+                if not custom_url:
+                    st.info(f"🔗 [Open Original Post]({links[selected_title]})")
+                else:
+                    st.info(f"🔗 [Open Custom Post]({custom_url})")
             else:
                 st.error("Could not fetch post list.")
                 st.stop()
@@ -387,7 +393,13 @@ if __name__ == "__main__":
 
     try:
         with st.spinner("✨ AI is analyzing the post..."):
-            post_url = links[selected_title]
+            if custom_url:
+                post_url = custom_url
+                display_title = "Custom URL Post"
+            else:
+                post_url = links[selected_title]
+                display_title = selected_title
+                
             content_text = scrape_naver_blog(post_url)
             content_text = remove_blank_lines(content_text)
             
@@ -409,7 +421,7 @@ if __name__ == "__main__":
             st.download_button(
                 label="Download Original Content (.txt)",
                 data=content_text,
-                file_name=f"{selected_title}.txt",
+                file_name=f"{display_title}.txt",
                 mime="text/plain",
                 use_container_width=True
             )
