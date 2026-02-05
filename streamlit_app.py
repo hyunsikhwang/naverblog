@@ -106,87 +106,90 @@ def get_stealth_headers(is_mobile=False):
     }
 
 def scrape_with_playwright(url, blog_id, log_no):
-    """Playwright v2.3.0: Akamai 우회 및 브라우저 지문 고도화"""
+    """Playwright v2.4.0: 유저 플로우 모사 및 장치 정밀 에뮬레이션"""
     browser = None
     try:
         if blog_id and log_no:
             target_url = f"https://m.blog.naver.com/PostView.naver?blogId={blog_id}&logNo={log_no}"
-            add_log(f"Playwright 모바일(Stealth) 시작: {target_url}")
         else:
             target_url = url
-            add_log(f"Playwright PC(Stealth) 시작: {url}")
 
         with sync_playwright() as p:
             try:
-                # 브라우저 실행 시 더 많은 인자 추가 (탐지 회피)
                 browser = p.chromium.launch(headless=True, args=[
                     '--disable-blink-features=AutomationControlled',
-                    '--disable-infobars',
                     '--no-sandbox'
                 ])
             except Exception as e:
                 add_log(f"브라우저 실행 실패: {str(e)[:100]}")
                 return None
 
-            headers = get_stealth_headers(is_mobile=bool(blog_id))
+            # iPhone 13 기기 정밀 에뮬레이션
+            iphone = p.devices['iPhone 13']
             context = browser.new_context(
-                user_agent=headers['User-Agent'],
-                viewport={'width': 390, 'height': 844} if blog_id else {'width': 1280, 'height': 800},
-                extra_http_headers={k: v for k, v in headers.items() if k != 'User-Agent'},
+                **iphone,
                 locale="ko-KR",
                 timezone_id="Asia/Seoul"
             )
             
-            # 쿠키 주입
-            context.add_cookies(generate_naver_cookies())
-            
             page = context.new_page()
-            # 고도화된 스텔스 스크립트 (navigator 지문 수정)
-            page.add_init_script("""
-                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-                Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
-                Object.defineProperty(navigator, 'languages', {get: () => ['ko-KR', 'ko']});
-            """)
+            # 스텔스 고도화
+            page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
-            # 내비게이션 전 지터링
-            delay = random.uniform(1.0, 2.5)
-            add_log(f"접속 전 지연 중... ({delay:.1f}s)")
-            time.sleep(delay)
+            # --- 유저 플로우 모사 Step 1: 네이버 메인 접속 ---
+            add_log("네이버 메인 접속 시도 (보안 토큰 확보)...")
+            try:
+                page.goto("https://www.naver.com", wait_until="networkidle", timeout=30000)
+                # 실제 유저처럼 메인에서 잠시 체류
+                stay_time = random.uniform(1.5, 3.0)
+                add_log(f"메인 체류 중... ({stay_time:.1f}s)")
+                time.sleep(stay_time)
+            except Exception as e:
+                add_log(f"메인 접속 지연/실패(계속 진행): {str(e)[:50]}")
 
-            add_log("페이지 접속 시도...")
-            page.goto(target_url, wait_until="networkidle", timeout=60000)
+            # --- 유저 플로우 모사 Step 2: 블로그 실접속 ---
+            add_log(f"블로그 본문 이동 중: {target_url}")
+            page.goto(target_url, wait_until="networkidle", timeout=45000)
             
             page_title = page.title()
             add_log(f"페이지 제목: {page_title}")
 
+            # Akamai 차단 재시도 로직
             if "Access Denied" in page_title or "Deny" in page_title:
-                add_log("Akamai WAF 차단 감지됨 (403 Access Denied)")
-                browser.close()
-                return None # Fallback 레이어로 전환
+                add_log("Akamai 차단 재감지. 새 세션으로 1회 재시도...")
+                # 재시도시에는 다른 유입 경로(Referer) 사용
+                page.goto("https://section.blog.naver.com", wait_until="domcontentloaded")
+                time.sleep(2)
+                page.goto(target_url, wait_until="networkidle", timeout=45000)
+                page_title = page.title()
+                if "Access Denied" in page_title:
+                    add_log("재시도 역시 차단되었습니다.")
+                    browser.close()
+                    return None
 
             if "페이지를 찾을 수 없습니다" in page_title or "삭제된 게시글" in page_title:
                 browser.close()
                 return "존재하지 않거나 삭제된 게시글입니다."
 
             content = ""
-            add_log("본문 데이터 추출 시도...")
+            add_log("데이터 추출 중...")
             
-            # 셀렉터 탐색 (우선순위: 모바일 -> 전체 -> Iframe)
+            # 셀렉터 탐색
             selectors = [".se-main-container", "#postViewArea", ".post_ct", "#post_1", ".article_body"]
             for selector in selectors:
                 element = page.query_selector(selector)
                 if element:
                     content = element.inner_text()
                     if content.strip(): 
-                        add_log(f"성공: {selector}")
+                        add_log(f"추출 성공: {selector}")
                         break
 
-            # PC Iframe 백업 (모바일 모드가 아닐 때만)
-            if not content and "m.blog.naver.com" not in target_url:
-                iframe = page.frame(name="mainFrame")
-                if iframe:
-                    add_log("PC Iframe 본문 탐색 중...")
-                    content = iframe.inner_text(".se-main-container") or iframe.inner_text("#postViewArea")
+            # BeautifulSoup 최종 백업
+            if not content:
+                add_log("BeautifulSoup 백업 가동...")
+                soup = BeautifulSoup(page.content(), 'html.parser')
+                target = soup.find('div', class_='se-main-container') or soup.find('div', id='postViewArea') or soup.find('div', class_='post_ct')
+                if target: content = target.get_text(separator='\n', strip=True)
 
             browser.close()
             return content
