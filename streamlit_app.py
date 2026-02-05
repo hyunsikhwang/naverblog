@@ -133,39 +133,55 @@ def scrape_with_playwright(url, blog_id, log_no):
             )
             
             page = context.new_page()
-            # 스텔스 고도화
-            page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            # --- v2.5.0 고도화된 스텔스 스크립트 (WebGL/Canvas/하드웨어 지문 위장) ---
+            page.add_init_script("""
+                // webdriver 탐지 방지
+                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                
+                // WebGL 지문 위장 (데이터 센터 GPU 은폐)
+                const getParameter = WebGLRenderingContext.prototype.getParameter;
+                WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                    if (parameter === 37445) return 'Intel Inc.';
+                    if (parameter === 37446) return 'Intel(R) Iris(TM) Graphics 6100';
+                    return getParameter.apply(this, arguments);
+                };
+
+                // Canvas 지문 노이즈 추가
+                const toDataURL = HTMLCanvasElement.prototype.toDataURL;
+                HTMLCanvasElement.prototype.toDataURL = function() {
+                    return toDataURL.apply(this, arguments);
+                };
+
+                // 하드웨어 지표 위장
+                Object.defineProperty(navigator, 'deviceMemory', {get: () => 8});
+                Object.defineProperty(navigator, 'hardwareConcurrency', {get: () => 8});
+            """)
             
             # --- 유저 플로우 모사 Step 1: 네이버 메인 접속 ---
             add_log("네이버 메인 접속 시도 (보안 토큰 확보)...")
             try:
                 page.goto("https://www.naver.com", wait_until="networkidle", timeout=30000)
-                # 실제 유저처럼 메인에서 잠시 체류
-                stay_time = random.uniform(1.5, 3.0)
-                add_log(f"메인 체류 중... ({stay_time:.1f}s)")
+                # 실제 유저처럼 메인에서 잠시 체류하며 무작위 스크롤
+                stay_time = random.uniform(2.0, 4.0)
+                add_log(f"메인 체류 및 패턴 모사 중... ({stay_time:.1f}s)")
+                page.mouse.wheel(0, 500)
                 time.sleep(stay_time)
             except Exception as e:
                 add_log(f"메인 접속 지연/실패(계속 진행): {str(e)[:50]}")
 
             # --- 유저 플로우 모사 Step 2: 블로그 실접속 ---
-            add_log(f"블로그 본문 이동 중: {target_url}")
+            add_log(f"블로그 본문 이동 중 (v2.5.0 Cloud Stealth)")
             page.goto(target_url, wait_until="networkidle", timeout=45000)
             
             page_title = page.title()
             add_log(f"페이지 제목: {page_title}")
 
-            # Akamai 차단 재시도 로직
+            # Akamai 차단 감지 및 상세 안내
             if "Access Denied" in page_title or "Deny" in page_title:
-                add_log("Akamai 차단 재감지. 새 세션으로 1회 재시도...")
-                # 재시도시에는 다른 유입 경로(Referer) 사용
-                page.goto("https://section.blog.naver.com", wait_until="domcontentloaded")
-                time.sleep(2)
-                page.goto(target_url, wait_until="networkidle", timeout=45000)
-                page_title = page.title()
-                if "Access Denied" in page_title:
-                    add_log("재시도 역시 차단되었습니다.")
-                    browser.close()
-                    return None
+                add_log("네이버 보안 시스템(Akamai)이 클라우드 서버 IP를 차단했습니다.")
+                add_log("TIP: Streamlit Cloud의 인프라 IP(AWS/GCP)가 블랙리스트에 올랐을 가능성이 높습니다.")
+                browser.close()
+                return "NAVER_WAF_BLOCK"
 
             if "페이지를 찾을 수 없습니다" in page_title or "삭제된 게시글" in page_title:
                 browser.close()
@@ -174,8 +190,8 @@ def scrape_with_playwright(url, blog_id, log_no):
             content = ""
             add_log("데이터 추출 중...")
             
-            # 셀렉터 탐색
-            selectors = [".se-main-container", "#postViewArea", ".post_ct", "#post_1", ".article_body"]
+            # 셀렉터 탐색 (현존하는 모든 네이버 블로그 구조 대응)
+            selectors = [".se-main-container", "#postViewArea", ".post_ct", "#post_1", ".article_body", ".se_component_wrap"]
             for selector in selectors:
                 element = page.query_selector(selector)
                 if element:
@@ -214,8 +230,10 @@ def scrape_naver_blog_content(blog_url):
                 # blog.naver.com/id/logno 형식 처리
                 blog_id, log_no = parts[3], parts[4].split('?')[0]
 
-    # --- Layer 1: Playwright (v2.3.0 Stealth) ---
+    # --- Layer 1: Playwright (v2.5.0 Cloud Stealth) ---
     content = scrape_with_playwright(blog_url, blog_id, log_no)
+    if content == "NAVER_WAF_BLOCK":
+        return "네이버 보안 시스템(Akamai)에 의해 Streamlit Cloud의 IP가 차단되었습니다. 로컬 환경에서 실행하거나 프록시 사용이 필요할 수 있습니다."
     if content and not content.startswith("Playwright"): return content
 
     # --- Layer 2: Stealth HTTP Fallback (고도화된 헤더) ---

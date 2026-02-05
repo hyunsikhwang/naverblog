@@ -19,3 +19,7 @@ libgtk-3-0
 libv4l-0
 libegl1
 libgles2
+libgbm1
+libasound2
+fonts-nanum
+fonts-noto-cjk
