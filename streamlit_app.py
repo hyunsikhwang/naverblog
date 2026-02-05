@@ -79,10 +79,19 @@ def get_stealth_headers():
 
 def scrape_with_playwright(url):
     """Playwright 고도화 버전: Stealth 설정 및 복합 추출 로직"""
+    browser = None
     try:
         add_log(f"Playwright 시작: {url}")
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            try:
+                browser = p.chromium.launch(headless=True)
+            except Exception as e:
+                err_msg = str(e)
+                add_log(f"브라우저 실행 실패 (시스템 라이브러리 누락 가능성): {err_msg[:100]}...")
+                if "shared libraries" in err_msg or "libXfixes" in err_msg:
+                    st.warning("⚠️ 클라우드 환경의 브라우저 엔진 설정에 문제가 발견되었습니다. 보조 스크래핑 모드로 자동 전환합니다.")
+                return None
+
             # 수동 Stealth 설정 적용
             context = browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
@@ -151,7 +160,7 @@ def scrape_with_playwright(url):
                 
     except Exception as e:
         add_log(f"Playwright 에러 발생: {str(e)}")
-        if 'browser' in locals(): browser.close()
+        if browser: browser.close()
         return None
 
 def scrape_naver_blog_content(blog_url):
