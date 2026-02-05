@@ -4,3 +4,4 @@ beautifulsoup4
 openai
 httpx
 h2
+playwright
