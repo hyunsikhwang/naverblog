@@ -1,12 +1,14 @@
 import streamlit as st
-import requests
+import httpx
 from bs4 import BeautifulSoup
 import re
 import time
+import random
+import string
 
 # 페이지 설정
 st.set_page_config(
-    page_title="네이버 블로그 스크래퍼",
+    page_title="네이버 블로그 스크래퍼 v1.5.0",
     page_icon="📝",
     layout="wide"
 )
@@ -48,21 +50,43 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-def get_enhanced_headers():
-    return {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+def generate_random_id(length=10):
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+
+def get_stealth_headers():
+    user_agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Edge/121.0.0.0'
+    ]
+    
+    ua = random.choice(user_agents)
+    is_chrome = 'Chrome' in ua
+    
+    headers = {
+        'User-Agent': ua,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
         'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'max-age=0',
+        'Connection': 'keep-alive',
         'Referer': 'https://section.blog.naver.com/',
-        'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
         'Sec-Fetch-Dest': 'document',
         'Sec-Fetch-Mode': 'navigate',
         'Sec-Fetch-Site': 'same-origin',
         'Sec-Fetch-User': '?1',
         'Upgrade-Insecure-Requests': '1'
     }
+    
+    if is_chrome:
+        headers.update({
+            'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"'
+        })
+        
+    return headers
 
 def scrape_naver_blog_content(blog_url):
     try:
@@ -70,12 +94,12 @@ def scrape_naver_blog_content(blog_url):
         blog_id = ""
         log_no = ""
         
-        # 형식 1: https://blog.naver.com/blogId/logNo
-        # 형식 2: https://blog.naver.com/PostView.naver?blogId=...&logNo=...
         if 'blog.naver.com' in blog_url:
             if 'PostView.naver' in blog_url or 'PostView.nhn' in blog_url:
-                blog_id = re.search(r'blogId=([^&]+)', blog_url).group(1)
-                log_no = re.search(r'logNo=([^&]+)', blog_url).group(1)
+                blog_id_match = re.search(r'blogId=([^&]+)', blog_url)
+                log_no_match = re.search(r'logNo=([^&]+)', blog_url)
+                if blog_id_match: blog_id = blog_id_match.group(1)
+                if log_no_match: log_no = log_no_match.group(1)
             else:
                 parts = blog_url.split('/')
                 if len(parts) >= 5:
@@ -83,70 +107,67 @@ def scrape_naver_blog_content(blog_url):
                     log_no = parts[4]
         
         if not blog_id or not log_no:
-            # URL 형식 체크 (기존 로직 유지)
             if 'blog.naver.com' not in blog_url:
                 return "유효한 네이버 블로그 URL이 아닙니다."
 
-        headers = get_enhanced_headers()
-        
-        # --- Layer 1: Mobile Web App Data (가장 강력함) ---
-        try:
+        # Stealth Session with httpx (Best for bypassing Cloud IP blocks)
+        with httpx.Client(http2=True, follow_redirects=True, timeout=15.0) as client:
+            headers = get_stealth_headers()
+            
+            # 더미 쿠키 시뮬레이션 (NNB 등)
+            dummy_cookies = {
+                'NNB': generate_random_id(13).upper(),
+                'ASID': generate_random_id(32),
+                'B_W_S': '0'
+            }
+            
+            # --- Layer 1: Mobile Web App (가장 높은 성공률) ---
             mobile_url = f"https://m.blog.naver.com/PostView.naver?blogId={blog_id}&logNo={log_no}"
-            response = requests.get(mobile_url, headers=headers, timeout=10)
+            
+            # 무작위 지터 추가
+            time.sleep(random.uniform(0.3, 0.8))
+            
+            response = client.get(mobile_url, headers=headers, cookies=dummy_cookies)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
                 content_div = soup.find('div', class_='se-main-container')
                 if not content_div:
                     content_div = soup.find('div', id='postViewArea')
-                
                 if content_div:
                     return content_div.get_text(separator='\n', strip=True)
-        except Exception:
-            pass
 
-        # --- Layer 2: Original URL with Enhanced Headers ---
-        response = requests.get(blog_url, headers=headers, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        # 1. iframe 내부의 본문 (최근 방식)
-        main_frame = soup.find('iframe', id='mainFrame')
-        if main_frame:
-            iframe_url = main_frame['src']
-            if not iframe_url.startswith('http'):
-                base_url = blog_url.split('/')[0] + '//' + blog_url.split('/')[2]
-                iframe_url = base_url + iframe_url
+            # --- Layer 2: PC Version (Iframe) ---
+            # 지터 후 재시도
+            time.sleep(random.uniform(0.5, 1.2))
+            headers = get_stealth_headers() # 유저 에이전트 교체
+            response = client.get(blog_url, headers=headers, cookies=dummy_cookies)
             
-            iframe_response = requests.get(iframe_url, headers=headers, timeout=10)
-            iframe_response.raise_for_status()
-            iframe_soup = BeautifulSoup(iframe_response.text, 'html.parser')
-            
-            content_div = iframe_soup.find('div', class_='se-main-container')
-            if not content_div:
-                content_div = iframe_soup.find('div', id='postViewArea')
-            
-            if content_div:
-                return content_div.get_text(separator='\n', strip=True)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                main_frame = soup.find('iframe', id='mainFrame')
+                if main_frame:
+                    iframe_url = main_frame['src']
+                    if not iframe_url.startswith('http'):
+                        base_url = blog_url.split('/')[0] + '//' + blog_url.split('/')[2]
+                        iframe_url = base_url + iframe_url
+                    
+                    iframe_response = client.get(iframe_url, headers=headers, cookies=dummy_cookies)
+                    if iframe_response.status_code == 200:
+                        iframe_soup = BeautifulSoup(iframe_response.text, 'html.parser')
+                        content_div = iframe_soup.find('div', class_='se-main-container')
+                        if not content_div:
+                            content_div = iframe_soup.find('div', id='postViewArea')
+                        if content_div:
+                            return content_div.get_text(separator='\n', strip=True)
 
-        # 2. iframe 없이 직접 본문
-        else:
-            content_div = soup.find('div', class_='se-main-container')
-            if not content_div:
-                content_div = soup.find('div', id='postViewArea')
-            
-            if content_div:
-                return content_div.get_text(separator='\n', strip=True)
+        # 모든 레이어 실패 시
+        status_code = response.status_code if 'response' in locals() else "N/A"
+        if status_code == 403:
+            return f"403 Forbidden: 클라우드 IP가 차단되었습니다. (Status: {status_code})"
+        return f"본문 내용을 찾을 수 없습니다. (응답 코드: {status_code})"
 
-        return "본문 내용을 찾을 수 없습니다. (보안 시스템에 의해 차단되었을 수 있습니다)"
-
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 403:
-            return "403 Forbidden: 네이버 보안 시스템이 접근을 차단했습니다. 잠시 후 다시 시도해 주세요."
-        return f"HTTP 오류: {e}"
-    except requests.exceptions.RequestException as e:
-        return f"요청 오류: {e}"
     except Exception as e:
-        return f"스크래핑 오류: {e}"
+        return f"스크래핑 오류 발생: {str(e)}"
 
 def remove_blank_lines(text: str) -> str:
     if not text: return ""
