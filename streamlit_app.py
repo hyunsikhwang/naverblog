@@ -48,17 +48,64 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+def get_enhanced_headers():
+    return {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Referer': 'https://section.blog.naver.com/',
+        'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1'
+    }
+
 def scrape_naver_blog_content(blog_url):
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
+        # URL에서 blogId와 logNo 추출
+        blog_id = ""
+        log_no = ""
         
-        # URL 형식 체크 (blog.naver.com 포함 여부)
-        if 'blog.naver.com' not in blog_url:
-            return "유효한 네이버 블로그 URL이 아닙니다."
+        # 형식 1: https://blog.naver.com/blogId/logNo
+        # 형식 2: https://blog.naver.com/PostView.naver?blogId=...&logNo=...
+        if 'blog.naver.com' in blog_url:
+            if 'PostView.naver' in blog_url or 'PostView.nhn' in blog_url:
+                blog_id = re.search(r'blogId=([^&]+)', blog_url).group(1)
+                log_no = re.search(r'logNo=([^&]+)', blog_url).group(1)
+            else:
+                parts = blog_url.split('/')
+                if len(parts) >= 5:
+                    blog_id = parts[3]
+                    log_no = parts[4]
+        
+        if not blog_id or not log_no:
+            # URL 형식 체크 (기존 로직 유지)
+            if 'blog.naver.com' not in blog_url:
+                return "유효한 네이버 블로그 URL이 아닙니다."
 
-        response = requests.get(blog_url, headers=headers)
+        headers = get_enhanced_headers()
+        
+        # --- Layer 1: Mobile Web App Data (가장 강력함) ---
+        try:
+            mobile_url = f"https://m.blog.naver.com/PostView.naver?blogId={blog_id}&logNo={log_no}"
+            response = requests.get(mobile_url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                content_div = soup.find('div', class_='se-main-container')
+                if not content_div:
+                    content_div = soup.find('div', id='postViewArea')
+                
+                if content_div:
+                    return content_div.get_text(separator='\n', strip=True)
+        except Exception:
+            pass
+
+        # --- Layer 2: Original URL with Enhanced Headers ---
+        response = requests.get(blog_url, headers=headers, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -70,13 +117,13 @@ def scrape_naver_blog_content(blog_url):
                 base_url = blog_url.split('/')[0] + '//' + blog_url.split('/')[2]
                 iframe_url = base_url + iframe_url
             
-            iframe_response = requests.get(iframe_url, headers=headers)
+            iframe_response = requests.get(iframe_url, headers=headers, timeout=10)
             iframe_response.raise_for_status()
             iframe_soup = BeautifulSoup(iframe_response.text, 'html.parser')
             
-            content_div = iframe_soup.find('div', class_='se-main-container') # 스마트 에디터
+            content_div = iframe_soup.find('div', class_='se-main-container')
             if not content_div:
-                content_div = iframe_soup.find('div', id='postViewArea') # 구버전 에디터
+                content_div = iframe_soup.find('div', id='postViewArea')
             
             if content_div:
                 return content_div.get_text(separator='\n', strip=True)
@@ -90,8 +137,12 @@ def scrape_naver_blog_content(blog_url):
             if content_div:
                 return content_div.get_text(separator='\n', strip=True)
 
-        return "본문 내용을 찾을 수 없습니다."
+        return "본문 내용을 찾을 수 없습니다. (보안 시스템에 의해 차단되었을 수 있습니다)"
 
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 403:
+            return "403 Forbidden: 네이버 보안 시스템이 접근을 차단했습니다. 잠시 후 다시 시도해 주세요."
+        return f"HTTP 오류: {e}"
     except requests.exceptions.RequestException as e:
         return f"요청 오류: {e}"
     except Exception as e:
