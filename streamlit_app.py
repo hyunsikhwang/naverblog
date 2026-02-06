@@ -34,6 +34,8 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 GAS_URL = "https://script.google.com/macros/s/AKfycbx0PDDwIUOPlRenwl0fUKEUvkaxIi0fS91H7bTfZ9Vx_e30Sk30_EnT6yGPMHJSf-zUWg/exec"
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_MODEL = "openai/gpt-oss-120b:free"
 
 def fetch_via_gas(target_url):
     try:
@@ -42,6 +44,43 @@ def fetch_via_gas(target_url):
         if res.status_code == 200:
             return res.text
         add_log(f"GAS 응답 코드: {res.status_code}")
+    except Exception:
+        return None
+    return None
+
+def generate_one_line_comment(content):
+    try:
+        api_key = st.secrets.get("api_key")
+        if not api_key:
+            add_log("OpenRouter API 키가 설정되지 않았습니다.")
+            return None
+        snippet = content[:4000]
+        payload = {
+            "model": OPENROUTER_MODEL,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You summarize Korean blog content into a single concise one-line comment in Korean."
+                },
+                {
+                    "role": "user",
+                    "content": f"다음 내용을 읽고 한줄 코멘트를 작성해줘. 한 문장으로 짧게.\n\n{snippet}"
+                }
+            ],
+            "temperature": 0.7,
+            "max_tokens": 80
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://streamlit.app/",
+            "X-Title": "Naver Blog Scraper"
+        }
+        res = httpx.post(OPENROUTER_URL, json=payload, headers=headers, timeout=30.0)
+        if res.status_code == 200:
+            data = res.json()
+            return data["choices"][0]["message"]["content"].strip()
+        add_log(f"OpenRouter 응답 코드: {res.status_code}")
     except Exception:
         return None
     return None
@@ -122,6 +161,9 @@ if scrape_button:
             
         if raw_content and not raw_content.startswith("네이버 보안 시스템"):
             content = remove_blank_lines(raw_content)
+            one_line = generate_one_line_comment(content)
+            if one_line:
+                st.markdown(f"**한줄 코멘트: {one_line}**")
             st.success("데이터 추출 성공!")
             st.text_area("추출 결과", value=content, height=450)
             st.download_button("텍스트 파일 다운로드", data=content, file_name="naver_blog_scraped.txt")
