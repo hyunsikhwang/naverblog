@@ -3,7 +3,6 @@ import httpx
 from bs4 import BeautifulSoup
 import re
 import time
-from email.utils import parsedate_to_datetime
 
 # 페이지 설정
 st.set_page_config(
@@ -55,7 +54,7 @@ def extract_one_line_comment_via_openrouter(content):
         if not api_key:
             add_log("OpenRouter API 키가 설정되지 않았습니다.")
             return None
-        snippet = content[:6000]
+        snippet = content
         payload = {
             "model": OPENROUTER_MODEL,
             "messages": [
@@ -71,7 +70,7 @@ def extract_one_line_comment_via_openrouter(content):
                     "role": "user",
                     "content": (
                         "다음 본문에서 '한줄 코멘트/한줄평/한줄요약' 등 한줄 코멘트에 해당하는 "
-                        "라인을 그대로 추출해줘. 변형 금지. 없으면 NOT_FOUND만 출력.\n\n"
+                        "내용을 그대로 추출해줘. 변형 금지. 없으면 NOT_FOUND만 출력.\n\n"
                         f"{snippet}"
                     )
                 }
@@ -109,50 +108,6 @@ def fetch_direct(target_url):
     except Exception:
         return None
     return None
-
-@st.cache_data(ttl=300)
-def fetch_blog_posts(blog_id):
-    posts = []
-    rss_url = f"https://blog.naver.com/rss?blogId={blog_id}"
-    rss_xml = fetch_via_gas(rss_url)
-    if rss_xml:
-        try:
-            soup = BeautifulSoup(rss_xml, "xml")
-            for item in soup.find_all("item"):
-                title = item.find("title").get_text(strip=True) if item.find("title") else ""
-                link = item.find("link").get_text(strip=True) if item.find("link") else ""
-                pub = item.find("pubDate").get_text(strip=True) if item.find("pubDate") else ""
-                dt = None
-                if pub:
-                    try:
-                        dt = parsedate_to_datetime(pub)
-                    except Exception:
-                        dt = None
-                if title and link:
-                    posts.append({"title": title, "link": link, "date": dt})
-        except Exception:
-            posts = []
-
-    if not posts:
-        list_url = f"https://m.blog.naver.com/PostList.naver?blogId={blog_id}"
-        html = fetch_via_gas(list_url)
-        if html:
-            try:
-                soup = BeautifulSoup(html, "html.parser")
-                for a in soup.find_all("a", href=True):
-                    href = a["href"]
-                    if "PostView.naver" in href and "blogId=" in href and "logNo=" in href:
-                        title = a.get_text(strip=True)
-                        if title:
-                            if href.startswith("/"):
-                                href = "https://m.blog.naver.com" + href
-                            posts.append({"title": title, "link": href, "date": None})
-            except Exception:
-                posts = []
-
-    if posts:
-        posts.sort(key=lambda x: x["date"].timestamp() if x["date"] else 0, reverse=True)
-    return posts
 
 def scrape_naver_blog_content(blog_url):
     st.session_state.debug_logs = []
@@ -205,38 +160,7 @@ def remove_blank_lines(text: str) -> str:
 st.title("📝 네이버 블로그 본문 스크래퍼 v2.6")
 st.markdown("---")
 
-default_blog_id = "ranto28"
-blog_id_input = st.text_input("블로그 ID", value=default_blog_id, help="예: ranto28")
-
-with st.spinner("블로그 포스트 목록을 불러오는 중..."):
-    post_list = fetch_blog_posts(blog_id_input)
-
-if post_list:
-    options = []
-    for p in post_list:
-        if p["date"]:
-            label = f"{p['title']} ({p['date'].strftime('%Y-%m-%d')})"
-        else:
-            label = p["title"]
-        options.append((label, p["link"]))
-    selected_label = st.selectbox(
-        "최근 포스트에서 선택",
-        options=[o[0] for o in options],
-        index=0
-    )
-    selected_url = dict(options).get(selected_label)
-else:
-    selected_url = None
-    st.info("포스트 목록을 불러오지 못했습니다. URL을 직접 입력해 주세요.")
-
-blog_url = st.text_input(
-    "스크래핑할 네이버 블로그 URL을 입력하세요",
-    placeholder="https://blog.naver.com/...",
-    key="blog_url_input"
-)
-if selected_url and st.session_state.get("blog_url_input") != selected_url:
-    st.session_state["blog_url_input"] = selected_url
-
+blog_url = st.text_input("스크래핑할 네이버 블로그 URL을 입력하세요", placeholder="https://blog.naver.com/...")
 scrape_button = st.button("내용 추출하기")
 
 if scrape_button:
