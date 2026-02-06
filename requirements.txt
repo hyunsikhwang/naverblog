@@ -1,3 +1,7 @@
 streamlit
-bs4
+requests
+beautifulsoup4
 openai
+httpx
+h2
+playwright
