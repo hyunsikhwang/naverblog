@@ -64,7 +64,15 @@ def scrape_naver_blog_content(blog_url):
     if blog_id and log_no:
         add_log("GAS 우회 요청 가동...")
         try:
-            mobile_url = f"https://m.blog.naver.com/PostView.naver?blogId={blog_id}&logNo={log_no}"
+            mobile_url = (
+                "https://m.blog.naver.com/PostView.naver"
+                f"?blogId={blog_id}"
+                f"&logNo={log_no}"
+                "&redirect=Dlog"
+                "&widgetTypeCall=true"
+                "&noTrackingCode=true"
+                "&directAccess=false"
+            )
             html = fetch_via_gas(mobile_url)
             if html:
                 soup = BeautifulSoup(html, 'html.parser')
