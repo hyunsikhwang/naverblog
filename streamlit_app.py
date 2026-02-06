@@ -217,23 +217,34 @@ with st.spinner("블로그 포스트 목록을 불러오는 중..."):
 
 if post_list:
     options = [(p["title"], p["link"]) for p in post_list]
+    url_map = {title: link for title, link in options}
+    st.session_state["post_url_map"] = url_map
+
+    def _apply_selected_post():
+        title = st.session_state.get("post_select")
+        if title:
+            st.session_state["blog_url_input"] = st.session_state["post_url_map"].get(title, "")
+
     selected_title = st.selectbox(
         "최근 포스트에서 선택",
         options=[o[0] for o in options],
-        index=0
+        index=0,
+        key="post_select",
+        on_change=_apply_selected_post
     )
-    selected_url = dict(options).get(selected_title)
+    selected_url = url_map.get(selected_title)
 else:
     selected_url = None
     st.info("포스트 목록을 불러오지 못했습니다. URL을 직접 입력해 주세요.")
+
+if selected_url and "blog_url_input" not in st.session_state:
+    st.session_state["blog_url_input"] = selected_url
 
 blog_url = st.text_input(
     "스크래핑할 네이버 블로그 URL을 입력하세요",
     placeholder="https://blog.naver.com/...",
     key="blog_url_input"
 )
-if selected_url and st.session_state.get("blog_url_input") != selected_url:
-    st.session_state["blog_url_input"] = selected_url
 scrape_button = st.button("내용 추출하기")
 
 if scrape_button:
