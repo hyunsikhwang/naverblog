@@ -237,7 +237,7 @@ else:
     selected_url = None
     st.info("포스트 목록을 불러오지 못했습니다. URL을 직접 입력해 주세요.")
 
-if selected_url and "blog_url_input" not in st.session_state:
+if "blog_url_input" not in st.session_state and selected_url:
     st.session_state["blog_url_input"] = selected_url
 
 blog_url = st.text_input(
