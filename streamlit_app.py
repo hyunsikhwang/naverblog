@@ -120,7 +120,7 @@ def fetch_blog_posts(blog_id, category_no=0, item_count=24, page=1):
         "page": page,
         "userId": blog_id
     }
-    full_url = str(httpx.URL(api_url).copy_add_params(params))
+    full_url = f"{api_url}?{httpx.QueryParams(params)}"
 
     data = None
     try:
