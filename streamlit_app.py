@@ -41,6 +41,20 @@ def fetch_via_gas(target_url):
         res = httpx.get(GAS_URL, params=params, timeout=20.0)
         if res.status_code == 200:
             return res.text
+        add_log(f"GAS 응답 코드: {res.status_code}")
+    except Exception:
+        return None
+    return None
+
+def fetch_direct(target_url):
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        res = httpx.get(target_url, headers=headers, timeout=15.0, follow_redirects=True)
+        if res.status_code == 200:
+            return res.text
+        add_log(f"직접 요청 응답 코드: {res.status_code}")
     except Exception:
         return None
     return None
@@ -60,9 +74,8 @@ def scrape_naver_blog_content(blog_url):
                 # blog.naver.com/id/logno 형식 처리
                 blog_id, log_no = parts[3], parts[4].split('?')[0]
 
-    # --- GAS 우회 요청 전용 ---
+    # --- 1차: 직접 요청 (IP 미차단 환경) ---
     if blog_id and log_no:
-        add_log("GAS 우회 요청 가동...")
         try:
             mobile_url = (
                 "https://m.blog.naver.com/PostView.naver"
@@ -73,7 +86,11 @@ def scrape_naver_blog_content(blog_url):
                 "&noTrackingCode=true"
                 "&directAccess=false"
             )
-            html = fetch_via_gas(mobile_url)
+            add_log("직접 요청 가동...")
+            html = fetch_direct(mobile_url)
+            if not html:
+                add_log("직접 요청 실패, GAS 우회 시도...")
+                html = fetch_via_gas(mobile_url)
             if html:
                 soup = BeautifulSoup(html, 'html.parser')
                 div = soup.find('div', class_='se-main-container') or soup.find('div', id='postViewArea')
