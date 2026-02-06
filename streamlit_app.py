@@ -48,26 +48,34 @@ def fetch_via_gas(target_url):
         return None
     return None
 
-def generate_one_line_comment(content):
+def extract_one_line_comment_via_openrouter(content):
     try:
         api_key = st.secrets.get("api_key")
         if not api_key:
             add_log("OpenRouter API 키가 설정되지 않았습니다.")
             return None
-        snippet = content[:4000]
+        snippet = content[:6000]
         payload = {
             "model": OPENROUTER_MODEL,
             "messages": [
                 {
                     "role": "system",
-                    "content": "You summarize Korean blog content into a single concise one-line comment in Korean."
+                    "content": (
+                        "You extract an existing one-line comment from Korean text. "
+                        "Return the exact line as-is without rewriting. "
+                        "If not found, return exactly: NOT_FOUND"
+                    )
                 },
                 {
                     "role": "user",
-                    "content": f"다음 내용을 읽고 한줄 코멘트를 작성해줘. 한 문장으로 짧게.\n\n{snippet}"
+                    "content": (
+                        "다음 본문에서 '한줄 코멘트/한줄평/한줄요약' 등 한줄 코멘트에 해당하는 "
+                        "라인을 그대로 추출해줘. 변형 금지. 없으면 NOT_FOUND만 출력.\n\n"
+                        f"{snippet}"
+                    )
                 }
             ],
-            "temperature": 0.7,
+            "temperature": 0.0,
             "max_tokens": 80
         }
         headers = {
@@ -76,10 +84,13 @@ def generate_one_line_comment(content):
             "HTTP-Referer": "https://streamlit.app/",
             "X-Title": "Naver Blog Scraper"
         }
-        res = httpx.post(OPENROUTER_URL, json=payload, headers=headers, timeout=30.0)
+        res = httpx.post(OPENROUTER_URL, json=payload, headers=headers, timeout=40.0)
         if res.status_code == 200:
             data = res.json()
-            return data["choices"][0]["message"]["content"].strip()
+            text = data["choices"][0]["message"]["content"].strip()
+            if text == "NOT_FOUND":
+                return None
+            return text
         add_log(f"OpenRouter 응답 코드: {res.status_code}")
     except Exception:
         return None
@@ -161,9 +172,12 @@ if scrape_button:
             
         if raw_content and not raw_content.startswith("네이버 보안 시스템"):
             content = remove_blank_lines(raw_content)
-            one_line = generate_one_line_comment(content)
+            with st.spinner("한줄 코멘트 추출 중..."):
+                one_line = extract_one_line_comment_via_openrouter(content)
             if one_line:
-                st.markdown(f"**한줄 코멘트: {one_line}**")
+                st.markdown(f"**{one_line}**")
+            else:
+                st.info("한줄 코멘트를 본문에서 찾지 못했습니다.")
             st.success("데이터 추출 성공!")
             st.text_area("추출 결과", value=content, height=450)
             st.download_button("텍스트 파일 다운로드", data=content, file_name="naver_blog_scraped.txt")
