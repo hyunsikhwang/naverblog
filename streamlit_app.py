@@ -103,7 +103,7 @@ if scrape_button:
         with st.spinner("네이버 보안 우회망을 통과 중입니다..."):
             raw_content = scrape_naver_blog_content(blog_url)
             
-        if raw_content and not raw_content.startswith("모든 시도가"):
+        if raw_content and not raw_content.startswith("네이버 보안 시스템"):
             content = remove_blank_lines(raw_content)
             st.success("데이터 추출 성공!")
             st.text_area("추출 결과", value=content, height=450)
