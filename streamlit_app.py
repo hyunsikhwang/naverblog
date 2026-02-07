@@ -36,7 +36,7 @@ st.markdown("""
 
 GAS_URL = "https://script.google.com/macros/s/AKfycbx0PDDwIUOPlRenwl0fUKEUvkaxIi0fS91H7bTfZ9Vx_e30Sk30_EnT6yGPMHJSf-zUWg/exec"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = "stepfun/step-3.5-flash:free"
+OPENROUTER_MODEL = "arcee-ai/trinity-large-preview:free"
 
 def fetch_via_gas(target_url):
     try:
@@ -77,7 +77,7 @@ def extract_one_line_comment_via_openrouter(content):
                 }
             ],
             "temperature": 0.0,
-            "max_tokens": 80
+            "max_tokens": 10000
         }
         headers = {
             "Authorization": f"Bearer {api_key}",
