@@ -77,7 +77,6 @@ def extract_one_line_comment_via_openrouter(content):
                 }
             ],
             "temperature": 0.0,
-            "max_tokens": 10000
         }
         headers = {
             "Authorization": f"Bearer {api_key}",
