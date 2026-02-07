@@ -71,7 +71,7 @@ def extract_one_line_comment_via_openrouter(content):
                     "role": "user",
                     "content": (
                         "다음 본문에서 '한줄 코멘트/한줄평/한줄요약' 등 글 내용의 후반부에 있는 한줄 코멘트에 해당하는 "
-                        "내용을 그대로 추출해줘. 한 문장이 아니라 여러 문장일 수도 있어. 변형 금지. 없으면 NOT_FOUND만 출력.\n\n"
+                        "내용을 그대로 추출해줘. 한 문장이 아니라 여러 문장일 수도 있어. 변형 금지. 없으면 NOT_FOUND만 출력:\n\n"
                         f"{snippet}"
                     )
                 }
