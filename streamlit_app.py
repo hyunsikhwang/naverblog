@@ -66,7 +66,7 @@ def extract_one_line_comment_via_openrouter(content):
                         "You are a helpful assistant that extracts a one-line comment and summarizes the blog post. "
                         "You must respond ONLY with a JSON object containing the following keys:\n"
                         "{\n"
-                        "  \"one_line_comment\": \"Extract the entire content of the one-line comment / opinion section (which might be labeled as '한줄평', '한줄코멘트', '한줄요약', etc.) typically located at the end of the text. Even if it is composed of multiple lines or paragraphs (2 or more lines), you must extract the whole section completely. Do not summarize or alter the original text. Clean any leading/trailing asterisks. If not found, set this to null.\",\n"
+                        "  \"one_line_comment\": \"Extract the entire content that follows the label '한줄코멘트' (or similar labels like '한줄평', '한줄요약', etc.) typically found at the end of the text. You must extract ALL of the text that comes AFTER that label until the very end of the document, preserving all lines, sentences, and paragraphs. Do not summarize, omit, or alter any part of it. Clean any leading/trailing asterisks. If not found, set this to null.\",\n"
                         "  \"summary\": \"Summarize the rest of the text excluding the one-line comment. Identify 3 to 6 major keywords in the summary and wrap them in **double asterisks** to emphasize them. Example: '**keyword**'.\"\n"
                         "}"
                     )
