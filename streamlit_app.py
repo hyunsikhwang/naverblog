@@ -241,14 +241,17 @@ st.markdown("""
         font-size: 1rem;
         margin-top: 0.5rem;
     }
-    .section-card {
-        background: white;
-        padding: 24px;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
-        border: 1px solid #f1f5f9;
-        margin-bottom: 24px;
+    
+    /* Streamlit 내장 border 컨테이너 스타일 오버라이딩 */
+    div[data-testid="stVerticalBlockBorderedTest"] {
+        background: white !important;
+        padding: 24px !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04) !important;
+        border: 1px solid #f1f5f9 !important;
+        margin-bottom: 24px !important;
     }
+    
     .card-title {
         font-size: 1.15rem;
         font-weight: 700;
@@ -321,126 +324,121 @@ st.markdown("""
 col1, col2 = st.columns([1, 1.2], gap="large")
 
 with col1:
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">🔗 블로그 연동 설정</div>', unsafe_allow_html=True)
-    
-    default_blog_id = "ranto28"
-    blog_id_input = st.text_input("블로그 ID 입력", value=default_blog_id, help="포스트 목록을 불러올 네이버 블로그 ID를 입력하세요.")
-    
-    with st.spinner("최근 포스트 목록 갱신 중..."):
-        post_list = fetch_blog_posts(blog_id_input)
-    
-    if post_list:
-        options = [(p["title"], p["link"]) for p in post_list]
-        url_map = {title: link for title, link in options}
-        st.session_state["post_url_map"] = url_map
+    with st.container(border=True):
+        st.markdown('<div class="card-title">🔗 블로그 연동 설정</div>', unsafe_allow_html=True)
+        
+        default_blog_id = "ranto28"
+        blog_id_input = st.text_input("블로그 ID 입력", value=default_blog_id, help="포스트 목록을 불러올 네이버 블로그 ID를 입력하세요.")
+        
+        with st.spinner("최근 포스트 목록 갱신 중..."):
+            post_list = fetch_blog_posts(blog_id_input)
+        
+        if post_list:
+            options = [(p["title"], p["link"]) for p in post_list]
+            url_map = {title: link for title, link in options}
+            st.session_state["post_url_map"] = url_map
 
-        def _apply_selected_post():
-            title = st.session_state.get("post_select")
-            if title:
-                st.session_state["blog_url_input"] = st.session_state["post_url_map"].get(title, "")
+            def _apply_selected_post():
+                title = st.session_state.get("post_select")
+                if title:
+                    st.session_state["blog_url_input"] = st.session_state["post_url_map"].get(title, "")
 
-        st.selectbox(
-            "최근 작성 포스트 선택",
-            options=[o[0] for o in options],
-            index=0,
-            key="post_select",
-            on_change=_apply_selected_post
+            st.selectbox(
+                "최근 작성 포스트 선택",
+                options=[o[0] for o in options],
+                index=0,
+                key="post_select",
+                on_change=_apply_selected_post
+            )
+            selected_url = url_map.get(options[0][0]) if options else None
+        else:
+            selected_url = None
+            st.info("포스트 목록을 가져오지 못했습니다. 아래에 URL을 직접 입력해 주세요.")
+            
+        if "blog_url_input" not in st.session_state and selected_url:
+            st.session_state["blog_url_input"] = selected_url
+            
+    with st.container(border=True):
+        st.markdown('<div class="card-title">📝 분석 실행</div>', unsafe_allow_html=True)
+        
+        blog_url = st.text_input(
+            "대상 포스트 URL 주소",
+            placeholder="https://blog.naver.com/...",
+            key="blog_url_input"
         )
-        selected_url = url_map.get(options[0][0]) if options else None
-    else:
-        selected_url = None
-        st.info("포스트 목록을 가져오지 못했습니다. 아래에 URL을 직접 입력해 주세요.")
-        
-    if "blog_url_input" not in st.session_state and selected_url:
-        st.session_state["blog_url_input"] = selected_url
-        
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">📝 분석 실행</div>', unsafe_allow_html=True)
-    
-    blog_url = st.text_input(
-        "대상 포스트 URL 주소",
-        placeholder="https://blog.naver.com/...",
-        key="blog_url_input"
-    )
-    scrape_button = st.button("실시간 스크래핑 및 요약")
-    st.markdown('</div>', unsafe_allow_html=True)
+        scrape_button = st.button("실시간 스크래핑 및 요약")
 
 with col2:
-    st.markdown('<div class="section-card" style="min-height: 480px;">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">📊 AI 요약 분석 리포트</div>', unsafe_allow_html=True)
-    
-    if scrape_button:
-        if not blog_url:
-            st.warning("URL 주소를 입력해주세요.")
-        else:
-            with st.spinner("네이버 보안 우회망 접속 및 본문 추출 중..."):
-                raw_content = scrape_naver_blog_content(blog_url)
-                
-            if raw_content and not raw_content.startswith("네이버 보안 시스템"):
-                content = remove_blank_lines(raw_content)
-                
-                with st.spinner("DeepSeek AI가 본문을 분석하고 요약하는 중..."):
-                    analysis_result = extract_one_line_comment_via_openrouter(content)
-                
-                if analysis_result:
-                    one_line = analysis_result.get("one_line_comment")
-                    summary = analysis_result.get("summary")
-                    
-                    if one_line:
-                        clean_one_line = one_line.strip("* ")
-                        st.markdown(
-                            f"""
-                            <div class="comment-box">
-                                <span style="color: #03c75a; font-weight: bold; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">💡 한줄 코멘트</span>
-                                <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #0f172a; line-height: 1.5;">{clean_one_line}</p>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-                    else:
-                        st.info("한줄 코멘트를 본문에서 찾지 못했습니다.")
-                    
-                    if summary:
-                        annotated_summary = re.sub(
-                            r'\*\*(.*?)\*\*', 
-                            r'<span class="keyword-badge">\1</span>', 
-                            summary
-                        )
-                        st.markdown(
-                            f"""
-                            <div class="summary-box">
-                                <span style="color: #475569; font-weight: bold; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 12px;">📋 본문 요약</span>
-                                <p style="line-height: 1.7; color: #334155; font-size: 1rem; margin: 0;">{annotated_summary}</p>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-                    
-                    st.success("요약 분석 완료!")
-                    
-                    # 스크래핑 결과 전문 (Collapsed)
-                    st.markdown("---")
-                    with st.expander("📝 스크래핑된 원문 텍스트 보기", expanded=False):
-                        st.text_area("추출 결과", value=content, height=350, label_visibility="collapsed")
-                        st.download_button("텍스트 파일 다운로드", data=content, file_name="naver_blog_scraped.txt")
-                        
-                else:
-                    st.error("AI 요약 요청 중 오류가 발생했습니다.")
-            else:
-                st.error(raw_content)
-                
-            # 디버그 로그
-            if st.session_state.debug_logs:
-                with st.expander("🛠️ 시스템 상세 디버그 정보", expanded=False):
-                    for log in st.session_state.debug_logs:
-                        st.code(log)
-    else:
-        st.info("좌측 입력창에서 블로그 URL을 입력 또는 선택한 뒤 [실시간 스크래핑 및 요약] 버튼을 클릭해 주세요.")
+    with st.container(border=True):
+        st.markdown('<div class="card-title">📊 AI 요약 분석 리포트</div>', unsafe_allow_html=True)
         
-    st.markdown('</div>', unsafe_allow_html=True)
+        if scrape_button:
+            if not blog_url:
+                st.warning("URL 주소를 입력해주세요.")
+            else:
+                with st.spinner("네이버 보안 우회망 접속 및 본문 추출 중..."):
+                    raw_content = scrape_naver_blog_content(blog_url)
+                    
+                if raw_content and not raw_content.startswith("네이버 보안 시스템"):
+                    content = remove_blank_lines(raw_content)
+                    
+                    with st.spinner("DeepSeek AI가 본문을 분석하고 요약하는 중..."):
+                        analysis_result = extract_one_line_comment_via_openrouter(content)
+                    
+                    if analysis_result:
+                        one_line = analysis_result.get("one_line_comment")
+                        summary = analysis_result.get("summary")
+                        
+                        if one_line:
+                            clean_one_line = one_line.strip("* ")
+                            st.markdown(
+                                f"""
+                                <div class="comment-box">
+                                    <span style="color: #03c75a; font-weight: bold; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">💡 한줄 코멘트</span>
+                                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #0f172a; line-height: 1.5;">{clean_one_line}</p>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+                        else:
+                            st.info("한줄 코멘트를 본문에서 찾지 못했습니다.")
+                        
+                        if summary:
+                            annotated_summary = re.sub(
+                                r'\*\*(.*?)\*\*', 
+                                r'<span class="keyword-badge">\1</span>', 
+                                summary
+                            )
+                            st.markdown(
+                                f"""
+                                <div class="summary-box">
+                                    <span style="color: #475569; font-weight: bold; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 12px;">📋 본문 요약</span>
+                                    <p style="line-height: 1.7; color: #334155; font-size: 1rem; margin: 0;">{annotated_summary}</p>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+                        
+                        st.success("요약 분석 완료!")
+                        
+                        # 스크래핑 결과 전문 (Collapsed)
+                        st.markdown("---")
+                        with st.expander("📝 스크래핑된 원문 텍스트 보기", expanded=False):
+                            st.text_area("추출 결과", value=content, height=350, label_visibility="collapsed")
+                            st.download_button("텍스트 파일 다운로드", data=content, file_name="naver_blog_scraped.txt")
+                            
+                    else:
+                        st.error("AI 요약 요청 중 오류가 발생했습니다.")
+                else:
+                    st.error(raw_content)
+                    
+                # 디버그 로그
+                if st.session_state.debug_logs:
+                    with st.expander("🛠️ 시스템 상세 디버그 정보", expanded=False):
+                        for log in st.session_state.debug_logs:
+                            st.code(log)
+        else:
+            st.info("좌측 입력창에서 블로그 URL을 입력 또는 선택한 뒤 [실시간 스크래핑 및 요약] 버튼을 클릭해 주세요.")
 
 st.markdown("""
     <div style="text-align: center; margin-top: 3rem; color: #94a3b8; font-size: 0.85rem; padding-bottom: 2rem;">
