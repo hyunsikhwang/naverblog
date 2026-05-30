@@ -217,15 +217,19 @@ st.markdown("""
         font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
         background-color: #f8fafc;
     }
+    /* Streamlit 기본 헤더 숨김 및 여백 제거 */
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
     [data-testid="stAppViewBlockContainer"] {
         max-width: 1200px;
-        padding-top: 0.8rem !important;
+        padding-top: 0px !important;
         padding-bottom: 2rem;
     }
     .main-title-container {
         text-align: center;
-        margin-bottom: 1rem;
-        padding: 0.5rem 0 1rem 0;
+        margin-bottom: 0.5rem;
+        padding: 0px 0 0.5rem 0;
     }
     .gradient-title {
         background: linear-gradient(135deg, #03c75a 0%, #10b981 100%);
