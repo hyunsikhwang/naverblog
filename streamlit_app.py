@@ -36,7 +36,7 @@ st.markdown("""
 
 GAS_URL = "https://script.google.com/macros/s/AKfycbx0PDDwIUOPlRenwl0fUKEUvkaxIi0fS91H7bTfZ9Vx_e30Sk30_EnT6yGPMHJSf-zUWg/exec"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = "x-ai/grok-4.1-fast"
+OPENROUTER_MODEL = "deepseek/deepseek-v4-flash"
 
 def fetch_via_gas(target_url):
     try:
