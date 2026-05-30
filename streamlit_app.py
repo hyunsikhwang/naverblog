@@ -321,7 +321,6 @@ st.markdown("""
 st.markdown("""
     <div class="main-title-container">
         <h1 class="gradient-title">📝 네이버 블로그 스크래퍼 v3.0</h1>
-        <p class="subtitle">네이버 보안 우회 스크래핑 및 DeepSeek-V4 요약 리포트 시스템</p>
     </div>
     """, unsafe_allow_html=True)
 
