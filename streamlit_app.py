@@ -58,24 +58,22 @@ def extract_one_line_comment_via_openrouter(content):
         snippet = content
         payload = {
             "model": OPENROUTER_MODEL,
+            "response_format": {"type": "json_object"},
             "messages": [
                 {
                     "role": "system",
                     "content": (
-                        "You extract an existing one-line comment from Korean text. "
-                        "Return the exact line as-is without rewriting. "
-                        "If not found, return exactly: NOT_FOUND"
+                        "You are a helpful assistant that extracts a one-line comment and summarizes the blog post. "
+                        "You must respond ONLY with a JSON object containing the following keys:\n"
+                        "{\n"
+                        "  \"one_line_comment\": \"Extract the exact existing one-line comment (or summary/opinion phrase) usually found at the end of the text. Do not modify the text. Clean any leading/trailing asterisks. If not found, set this to null.\",\n"
+                        "  \"summary\": \"Summarize the rest of the text excluding the one-line comment. Identify 3 to 6 major keywords in the summary and wrap them in **double asterisks** to emphasize them. Example: '**keyword**'.\"\n"
+                        "}"
                     )
                 },
                 {
                     "role": "user",
-                    "content": (
-                        "다음 본문에서 아래의 작업들을 수행해서 결과로 반환해주세요."
-                        "1. '한줄 코멘트/한줄평/한줄요약' 등 글 내용의 후반부에 있는 한줄 코멘트에 해당하는 "
-                        "내용을 그대로 추출해주세요. 한 문장이 아니라 여러 문장일 수도 있어. 변형 금지. 없으면 NOT_FOUND만 출력"
-                        "2. 한줄 코멘트를 제외한 나머지 본문 내용을 요약해서 반환해주세요.:\n\n"
-                        f"{snippet}"
-                    )
+                    "content": f"다음 본문에서 한줄 코멘트 추출 및 요약을 수행하여 JSON 객체로 반환해주세요:\n\n{snippet}"
                 }
             ],
             "temperature": 0.0,
@@ -90,11 +88,15 @@ def extract_one_line_comment_via_openrouter(content):
         if res.status_code == 200:
             data = res.json()
             text = data["choices"][0]["message"]["content"].strip()
-            if text == "NOT_FOUND":
-                return None
-            return text
+            try:
+                result_json = json.loads(text)
+                return result_json
+            except json.JSONDecodeError:
+                add_log("JSON 파싱 실패. 원본 텍스트: " + text)
+                return {"one_line_comment": None, "summary": text}
         add_log(f"OpenRouter 응답 코드: {res.status_code}")
-    except Exception:
+    except Exception as e:
+        add_log(f"OpenRouter 호출 에러: {str(e)}")
         return None
     return None
 
@@ -257,15 +259,49 @@ if scrape_button:
             
         if raw_content and not raw_content.startswith("네이버 보안 시스템"):
             content = remove_blank_lines(raw_content)
-            with st.spinner("한줄 코멘트 추출 중..."):
-                one_line = extract_one_line_comment_via_openrouter(content)
-            if one_line:
-                st.markdown(f"**{one_line}**")
+            with st.spinner("분석 및 요약 중..."):
+                analysis_result = extract_one_line_comment_via_openrouter(content)
+            
+            if analysis_result:
+                one_line = analysis_result.get("one_line_comment")
+                summary = analysis_result.get("summary")
+                
+                if one_line:
+                    clean_one_line = one_line.strip("* ")
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #ebfbee; border-left: 5px solid #2db400; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <span style="color: #2db400; font-weight: bold; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">한줄 코멘트</span>
+                            <p style="margin: 5px 0 0 0; font-size: 1.1em; font-weight: bold; color: #1e293b;">{clean_one_line}</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.info("한줄 코멘트를 본문에서 찾지 못했습니다.")
+                
+                if summary:
+                    annotated_summary = re.sub(
+                        r'\*\*(.*?)\*\*', 
+                        r'<span style="background-color: #e2f0fd; color: #0066cc; font-weight: bold; padding: 2px 6px; border-radius: 4px; border: 1px solid #b3d7ff; margin: 0 2px; font-size: 0.95em;">\1</span>', 
+                        summary
+                    )
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px;">
+                            <span style="color: #475569; font-weight: bold; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 10px;">본문 요약 및 키워드</span>
+                            <p style="line-height: 1.7; color: #334155; font-size: 1.05em; margin: 0;">{annotated_summary}</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
             else:
-                st.info("한줄 코멘트를 본문에서 찾지 못했습니다.")
+                st.error("AI 분석 결과를 가져오는데 실패했습니다.")
+                
             st.success("데이터 추출 성공!")
-            st.text_area("추출 결과", value=content, height=450)
-            st.download_button("텍스트 파일 다운로드", data=content, file_name="naver_blog_scraped.txt")
+            with st.expander("📝 추출 결과 전문 보기", expanded=False):
+                st.text_area("추출 결과", value=content, height=450, label_visibility="collapsed")
+                st.download_button("텍스트 파일 다운로드", data=content, file_name="naver_blog_scraped.txt")
         else:
             st.error(raw_content)
             
