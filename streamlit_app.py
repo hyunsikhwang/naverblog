@@ -209,109 +209,241 @@ def remove_blank_lines(text: str) -> str:
     return cleaned.strip()
 
 # UI 구성
-st.title("📝 네이버 블로그 본문 스크래퍼 v2.6")
-st.markdown("---")
+st.markdown("""
+    <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    
+    html, body, [data-testid="stAppViewContainer"] {
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        background-color: #f8fafc;
+    }
+    [data-testid="stAppViewBlockContainer"] {
+        max-width: 1200px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+    .main-title-container {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding: 1.5rem 0;
+    }
+    .gradient-title {
+        background: linear-gradient(135deg, #03c75a 0%, #10b981 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        font-size: 2.4rem;
+        letter-spacing: -1px;
+        margin: 0;
+    }
+    .subtitle {
+        color: #64748b;
+        font-size: 1rem;
+        margin-top: 0.5rem;
+    }
+    .section-card {
+        background: white;
+        padding: 24px;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+        border: 1px solid #f1f5f9;
+        margin-bottom: 24px;
+    }
+    .card-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    div.stButton > button {
+        background: linear-gradient(135deg, #03c75a 0%, #10b981 100%);
+        color: white !important;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1.05rem;
+        box-shadow: 0 4px 12px rgba(3, 199, 90, 0.15);
+        transition: all 0.2s ease-in-out;
+        width: 100%;
+        height: 48px;
+    }
+    div.stButton > button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(3, 199, 90, 0.25);
+        background: linear-gradient(135deg, #02b350 0%, #059669 100%);
+        color: white !important;
+    }
+    div.stButton > button:active {
+        transform: translateY(1px);
+    }
+    .comment-box {
+        background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+        border-left: 5px solid #03c75a;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(3, 199, 90, 0.02);
+    }
+    .summary-box {
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
+        margin-bottom: 20px;
+    }
+    .keyword-badge {
+        background-color: #e0f2fe;
+        color: #0369a1;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 8px;
+        border: 1px solid #bae6fd;
+        margin: 0 2px 4px 2px;
+        display: inline-block;
+        font-size: 0.9em;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-default_blog_id = "ranto28"
-blog_id_input = st.text_input("블로그 ID", value=default_blog_id, help="예: ranto28")
+# 헤더
+st.markdown("""
+    <div class="main-title-container">
+        <h1 class="gradient-title">📝 네이버 블로그 스크래퍼 v3.0</h1>
+        <p class="subtitle">네이버 보안 우회 스크래핑 및 DeepSeek-V4 요약 리포트 시스템</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-with st.spinner("블로그 포스트 목록을 불러오는 중..."):
-    post_list = fetch_blog_posts(blog_id_input)
+col1, col2 = st.columns([1, 1.2], gap="large")
 
-if post_list:
-    options = [(p["title"], p["link"]) for p in post_list]
-    url_map = {title: link for title, link in options}
-    st.session_state["post_url_map"] = url_map
+with col1:
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">🔗 블로그 연동 설정</div>', unsafe_allow_html=True)
+    
+    default_blog_id = "ranto28"
+    blog_id_input = st.text_input("블로그 ID 입력", value=default_blog_id, help="포스트 목록을 불러올 네이버 블로그 ID를 입력하세요.")
+    
+    with st.spinner("최근 포스트 목록 갱신 중..."):
+        post_list = fetch_blog_posts(blog_id_input)
+    
+    if post_list:
+        options = [(p["title"], p["link"]) for p in post_list]
+        url_map = {title: link for title, link in options}
+        st.session_state["post_url_map"] = url_map
 
-    def _apply_selected_post():
-        title = st.session_state.get("post_select")
-        if title:
-            st.session_state["blog_url_input"] = st.session_state["post_url_map"].get(title, "")
+        def _apply_selected_post():
+            title = st.session_state.get("post_select")
+            if title:
+                st.session_state["blog_url_input"] = st.session_state["post_url_map"].get(title, "")
 
-    selected_title = st.selectbox(
-        "최근 포스트에서 선택",
-        options=[o[0] for o in options],
-        index=0,
-        key="post_select",
-        on_change=_apply_selected_post
-    )
-    selected_url = url_map.get(selected_title)
-else:
-    selected_url = None
-    st.info("포스트 목록을 불러오지 못했습니다. URL을 직접 입력해 주세요.")
-
-if "blog_url_input" not in st.session_state and selected_url:
-    st.session_state["blog_url_input"] = selected_url
-
-blog_url = st.text_input(
-    "스크래핑할 네이버 블로그 URL을 입력하세요",
-    placeholder="https://blog.naver.com/...",
-    key="blog_url_input"
-)
-scrape_button = st.button("내용 추출하기")
-
-if scrape_button:
-    if not blog_url:
-        st.warning("URL을 입력해주세요.")
+        st.selectbox(
+            "최근 작성 포스트 선택",
+            options=[o[0] for o in options],
+            index=0,
+            key="post_select",
+            on_change=_apply_selected_post
+        )
+        selected_url = url_map.get(options[0][0]) if options else None
     else:
-        with st.spinner("네이버 보안 우회망을 통과 중입니다..."):
-            raw_content = scrape_naver_blog_content(blog_url)
-            
-        if raw_content and not raw_content.startswith("네이버 보안 시스템"):
-            content = remove_blank_lines(raw_content)
-            with st.spinner("분석 및 요약 중..."):
-                analysis_result = extract_one_line_comment_via_openrouter(content)
-            
-            if analysis_result:
-                one_line = analysis_result.get("one_line_comment")
-                summary = analysis_result.get("summary")
-                
-                if one_line:
-                    clean_one_line = one_line.strip("* ")
-                    st.markdown(
-                        f"""
-                        <div style="background-color: #ebfbee; border-left: 5px solid #2db400; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                            <span style="color: #2db400; font-weight: bold; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">한줄 코멘트</span>
-                            <p style="margin: 5px 0 0 0; font-size: 1.1em; font-weight: bold; color: #1e293b;">{clean_one_line}</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-                else:
-                    st.info("한줄 코멘트를 본문에서 찾지 못했습니다.")
-                
-                if summary:
-                    annotated_summary = re.sub(
-                        r'\*\*(.*?)\*\*', 
-                        r'<span style="background-color: #e2f0fd; color: #0066cc; font-weight: bold; padding: 2px 6px; border-radius: 4px; border: 1px solid #b3d7ff; margin: 0 2px; font-size: 0.95em;">\1</span>', 
-                        summary
-                    )
-                    st.markdown(
-                        f"""
-                        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px;">
-                            <span style="color: #475569; font-weight: bold; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 10px;">본문 요약 및 키워드</span>
-                            <p style="line-height: 1.7; color: #334155; font-size: 1.05em; margin: 0;">{annotated_summary}</p>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-            else:
-                st.error("AI 분석 결과를 가져오는데 실패했습니다.")
-                
-            st.success("데이터 추출 성공!")
-            with st.expander("📝 추출 결과 전문 보기", expanded=False):
-                st.text_area("추출 결과", value=content, height=450, label_visibility="collapsed")
-                st.download_button("텍스트 파일 다운로드", data=content, file_name="naver_blog_scraped.txt")
-        else:
-            st.error(raw_content)
-            
-        # 디버그 정보 출력
-        with st.expander("🛠️ 기술 디버그 정보 (실패 원인 분석)"):
-            if st.session_state.debug_logs:
-                for log in st.session_state.debug_logs:
-                    st.code(log)
-            else:
-                st.write("로그 정보가 없습니다.")
+        selected_url = None
+        st.info("포스트 목록을 가져오지 못했습니다. 아래에 URL을 직접 입력해 주세요.")
+        
+    if "blog_url_input" not in st.session_state and selected_url:
+        st.session_state["blog_url_input"] = selected_url
+        
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">📝 분석 실행</div>', unsafe_allow_html=True)
+    
+    blog_url = st.text_input(
+        "대상 포스트 URL 주소",
+        placeholder="https://blog.naver.com/...",
+        key="blog_url_input"
+    )
+    scrape_button = st.button("실시간 스크래핑 및 요약")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-st.markdown("---")
-st.caption("© 2024 HTTP Scraper Engine v2.6 | Streamlit Cloud Optimized")
+with col2:
+    st.markdown('<div class="section-card" style="min-height: 480px;">', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">📊 AI 요약 분석 리포트</div>', unsafe_allow_html=True)
+    
+    if scrape_button:
+        if not blog_url:
+            st.warning("URL 주소를 입력해주세요.")
+        else:
+            with st.spinner("네이버 보안 우회망 접속 및 본문 추출 중..."):
+                raw_content = scrape_naver_blog_content(blog_url)
+                
+            if raw_content and not raw_content.startswith("네이버 보안 시스템"):
+                content = remove_blank_lines(raw_content)
+                
+                with st.spinner("DeepSeek AI가 본문을 분석하고 요약하는 중..."):
+                    analysis_result = extract_one_line_comment_via_openrouter(content)
+                
+                if analysis_result:
+                    one_line = analysis_result.get("one_line_comment")
+                    summary = analysis_result.get("summary")
+                    
+                    if one_line:
+                        clean_one_line = one_line.strip("* ")
+                        st.markdown(
+                            f"""
+                            <div class="comment-box">
+                                <span style="color: #03c75a; font-weight: bold; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">💡 한줄 코멘트</span>
+                                <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #0f172a; line-height: 1.5;">{clean_one_line}</p>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+                    else:
+                        st.info("한줄 코멘트를 본문에서 찾지 못했습니다.")
+                    
+                    if summary:
+                        annotated_summary = re.sub(
+                            r'\*\*(.*?)\*\*', 
+                            r'<span class="keyword-badge">\1</span>', 
+                            summary
+                        )
+                        st.markdown(
+                            f"""
+                            <div class="summary-box">
+                                <span style="color: #475569; font-weight: bold; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 12px;">📋 본문 요약</span>
+                                <p style="line-height: 1.7; color: #334155; font-size: 1rem; margin: 0;">{annotated_summary}</p>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+                    
+                    st.success("요약 분석 완료!")
+                    
+                    # 스크래핑 결과 전문 (Collapsed)
+                    st.markdown("---")
+                    with st.expander("📝 스크래핑된 원문 텍스트 보기", expanded=False):
+                        st.text_area("추출 결과", value=content, height=350, label_visibility="collapsed")
+                        st.download_button("텍스트 파일 다운로드", data=content, file_name="naver_blog_scraped.txt")
+                        
+                else:
+                    st.error("AI 요약 요청 중 오류가 발생했습니다.")
+            else:
+                st.error(raw_content)
+                
+            # 디버그 로그
+            if st.session_state.debug_logs:
+                with st.expander("🛠️ 시스템 상세 디버그 정보", expanded=False):
+                    for log in st.session_state.debug_logs:
+                        st.code(log)
+    else:
+        st.info("좌측 입력창에서 블로그 URL을 입력 또는 선택한 뒤 [실시간 스크래핑 및 요약] 버튼을 클릭해 주세요.")
+        
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown("""
+    <div style="text-align: center; margin-top: 3rem; color: #94a3b8; font-size: 0.85rem; padding-bottom: 2rem;">
+        © 2026 Naver Blog Scraper Engine v3.0 | Streamlit Cloud Optimized
+    </div>
+    """, unsafe_allow_html=True)
