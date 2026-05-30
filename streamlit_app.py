@@ -221,15 +221,16 @@ st.markdown("""
     header[data-testid="stHeader"] {
         display: none !important;
     }
-    [data-testid="stAppViewBlockContainer"] {
-        max-width: 1200px;
+    [data-testid="stAppViewBlockContainer"], .block-container {
+        max-width: 1200px !important;
         padding-top: 0px !important;
-        padding-bottom: 2rem;
+        padding-bottom: 2rem !important;
     }
     .main-title-container {
         text-align: center;
-        margin-bottom: 0.5rem;
-        padding: 0px 0 0.5rem 0;
+        margin-top: -1.5rem !important;
+        margin-bottom: 0.5rem !important;
+        padding: 0px 0 0.5rem 0 !important;
     }
     .gradient-title {
         background: linear-gradient(135deg, #03c75a 0%, #10b981 100%);
