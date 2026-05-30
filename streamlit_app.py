@@ -66,7 +66,7 @@ def extract_one_line_comment_via_openrouter(content):
                         "You are a helpful assistant that extracts a one-line comment and summarizes the blog post. "
                         "You must respond ONLY with a JSON object containing the following keys:\n"
                         "{\n"
-                        "  \"one_line_comment\": \"Extract the exact existing one-line comment (or summary/opinion phrase) usually found at the end of the text. Do not modify the text. Clean any leading/trailing asterisks. If not found, set this to null.\",\n"
+                        "  \"one_line_comment\": \"Extract the entire content of the one-line comment / opinion section (which might be labeled as '한줄평', '한줄코멘트', '한줄요약', etc.) typically located at the end of the text. Even if it is composed of multiple lines or paragraphs (2 or more lines), you must extract the whole section completely. Do not summarize or alter the original text. Clean any leading/trailing asterisks. If not found, set this to null.\",\n"
                         "  \"summary\": \"Summarize the rest of the text excluding the one-line comment. Identify 3 to 6 major keywords in the summary and wrap them in **double asterisks** to emphasize them. Example: '**keyword**'.\"\n"
                         "}"
                     )
@@ -431,7 +431,7 @@ with col2:
                                 f"""
                                 <div class="comment-box">
                                     <span style="color: #03c75a; font-weight: bold; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">💡 한줄 코멘트</span>
-                                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #0f172a; line-height: 1.5;">{clean_one_line}</p>
+                                    <p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #0f172a; line-height: 1.5; white-space: pre-wrap;">{clean_one_line}</p>
                                 </div>
                                 """,
                                 unsafe_allow_html=True
