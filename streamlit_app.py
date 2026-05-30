@@ -314,6 +314,38 @@ st.markdown("""
         display: inline-block;
         font-size: 0.9em;
     }
+    
+    /* 모바일 반응형 대응 (화면 너비 768px 이하) */
+    @media (max-width: 768px) {
+        [data-testid="stAppViewBlockContainer"] {
+            padding: 8px !important;
+            padding-top: 0px !important;
+        }
+        .gradient-title {
+            font-size: 1.8rem !important;
+        }
+        div[data-testid="stVerticalBlockBorderedTest"] {
+            padding: 16px !important;
+            margin-bottom: 16px !important;
+            border-radius: 12px !important;
+        }
+        .comment-box {
+            padding: 14px !important;
+            border-radius: 10px !important;
+        }
+        .summary-box {
+            padding: 14px !important;
+            border-radius: 10px !important;
+        }
+        .card-title {
+            font-size: 1rem !important;
+            margin-bottom: 12px !important;
+        }
+        div.stButton > button {
+            height: 44px !important;
+            font-size: 0.95rem !important;
+        }
+    }
     </style>
     """, unsafe_allow_html=True)
 
