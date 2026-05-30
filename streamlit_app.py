@@ -219,13 +219,13 @@ st.markdown("""
     }
     [data-testid="stAppViewBlockContainer"] {
         max-width: 1200px;
-        padding-top: 2rem;
-        padding-bottom: 3rem;
+        padding-top: 0.8rem !important;
+        padding-bottom: 2rem;
     }
     .main-title-container {
         text-align: center;
-        margin-bottom: 2rem;
-        padding: 1.5rem 0;
+        margin-bottom: 1rem;
+        padding: 0.5rem 0 1rem 0;
     }
     .gradient-title {
         background: linear-gradient(135deg, #03c75a 0%, #10b981 100%);
